@@ -21,8 +21,8 @@ import java.util.GregorianCalendar
 import akka.actor.Actor
 import akka.event.Logging
 import org.mashupbots.socko.events.{HttpRequestEvent, WebSocketFrameEvent}
-import scala.util.parsing.json._
-
+import rapture.json.Json
+import rapture.json.jsonBackends.jackson._
 /**
  * Web Socket processor for chatting
  */
@@ -106,15 +106,9 @@ class FingerSmithHandler extends Actor {
    */
   private def writeWebSocketResponse(event: WebSocketFrameEvent) {
     log.info("TextWebSocketFrame: " + event.readText)
-
-    val dateFormatter = new SimpleDateFormat("HH:mm:ss")
-    val time = new GregorianCalendar()
-    val ts = dateFormatter.format(time.getTime())
-    val json = JSON.parseFull(event.readText());
-    val map:Map[String,Any] = json.get.asInstanceOf[Map[String, Any]]
-
-    val toFinger:String = map.get("to").get.asInstanceOf[String]
-    val message = map.get("message")
+    val json = Json.parse(event.readText());
+    val toFinger = json.to.as[String]
+    val message = json.message.as[String]
     val fromFinger = event.webSocketId
     FingerSmithApp.webServer.webSocketConnections.writeText("message "+event.readText(),toFinger)
     System.out.println(s"sending $message to $toFinger from $fromFinger closed")
