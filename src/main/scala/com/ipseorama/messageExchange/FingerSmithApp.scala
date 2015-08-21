@@ -80,9 +80,13 @@ object FingerSmithApp extends Logger {
   val routes = Routes({
 
     case HttpRequest(httpRequest) => httpRequest match {
-      case GET(Path("/html")) => {
+      case GET(Path("/status")) => {
         // Return HTML page to establish web socket
         actorSystem.actorOf(Props[FingerSmithHandler]) ! httpRequest
+      }
+      case GET(Path("/index.html")) => {
+        // Return HTML page to establish web socket
+        staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"index.html")
       }
       case PathSegments("js" :: relativePath) => {
         // Serve the static js content from resources
