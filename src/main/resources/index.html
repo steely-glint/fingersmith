@@ -1,0 +1,42 @@
+<html><head><title>Socko Web Socket Example</title></head>
+<body>
+<script src="http://code.jquery.com/jquery-1.8.3.js"></script><script src="/js/phono.sdp.js"></script>
+<script src="/js/ipseorama.js"></script>
+<script type="text/javascript">
+  var socket;
+  function gotFinger(finger){
+  if (!window.WebSocket) {
+    window.WebSocket = window.MozWebSocket;
+  }
+  if (window.WebSocket) {
+    socket = new WebSocket("ws://localhost:8888/websocket/?finger="+finger);
+    socket.onmessage = function(event) { var ta = document.getElementById('responseText'); ta.value = ta.value + '\n' + event.data };
+    socket.onopen = function(event) { var ta = document.getElementById('responseText'); ta.value = "Web Socket opened!"; };
+    socket.onclose = function(event) { var ta = document.getElementById('responseText'); ta.value = ta.value + "Web Socket closed"; };
+  } else { 
+    alert("Your browser does not support Web Sockets.");
+  }
+  }
+  Ipseorama.whoAmI(gotFinger,function(err) {
+console.log("could not create identity " + err)
+});
+  function send(message) {
+    if (!window.WebSocket) { return; }
+    if (socket.readyState == WebSocket.OPEN) {
+      socket.send(message);
+    } else {
+      alert("The socket is not open.");
+    }
+  }
+</script>
+<h1>Fingersmith test page</h1>
+<form onsubmit="return false;">
+  <input type="text" name="message" value="Hello, World!"/>
+  <input type="text" name="to" value="78A18BA5ED6E69E9F493AE69C8848714A48ECD487D25C24F13E8B781E55B374E"/>
+  <input type="button" value="Chat" onclick="var m = {to:this.form.to.value, message:this.form.message.value}; send(JSON.stringify(m))" />
+  
+  <h3>Output</h3>
+  <textarea id="responseText" style="width: 500px; height:300px;"></textarea>
+</form>
+</body>
+</html>
