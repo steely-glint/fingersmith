@@ -75,12 +75,12 @@ class FingerSmithHandler extends Actor {
    */
   private def writeWebSocketResponse(event: WebSocketFrameEvent) {
     log.info("TextWebSocketFrame: " + event.readText)
-    val json = Json.parse(event.readText());
+    val message = event.readText();
+    val json = Json.parse(message);
     val toFinger = json.to.as[String]
-    val message = json.message.as[String]
     val fromFinger = event.webSocketId
-    FingerSmithApp.webServer.webSocketConnections.writeText("message "+event.readText(),toFinger)
-    System.out.println(s"sending $message to $toFinger from $fromFinger closed")
+    FingerSmithApp.webServer.webSocketConnections.writeText(message,toFinger)
+    System.out.println(s"sending $message to $toFinger from $fromFinger")
   }
 
 }
