@@ -114,8 +114,7 @@ object FingerSmithApp extends Logger {
     }
 
   })
-
-  val webServer = new WebServer(WebServerConfig(), routes, actorSystem)
+  val webServer = new WebServer(WebServerConfig("FingerSmith", "0.0.0.0", 8888), routes, actorSystem)
 
   //
   // STEP #3 - Start and Stop Socko Web Server
@@ -126,7 +125,7 @@ object FingerSmithApp extends Logger {
     })
     webServer.start()
 
-    System.out.println("Open a few browsers and navigate to http://localhost:8888/html. Start chatting!")
+    System.out.println("Open a browsers and navigate to http://localhost:8888/index.html.")
   }
 
   def onWebSocketHandshakeComplete(webSocketId: String) {
