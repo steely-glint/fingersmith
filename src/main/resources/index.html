@@ -8,6 +8,7 @@
     <script type="text/javascript">
   var myFinger = undefined;
   var ipsed = null;
+  var chout;
   function gotFinger(finger){
     myFinger = finger;
     $('#myFinger').html(finger);
@@ -19,6 +20,7 @@
   });
   function onDcMessage(evt){
       console.log(" got dc message: " + evt.data);
+      $('#responseText').val(evt.data)
   }
   function onNewDc(channel){
       console.log("New DC ")
@@ -43,6 +45,11 @@
         }, 1000);
     };
     channel.onmessage = onDcMessage;
+    chout = channel;
+  }
+  function chsend(){
+	  var mess = $('#message').text()
+          chout.send(mess);
   }
 
 </script>
@@ -50,12 +57,12 @@
 <div> My Fingerprint is :
 <span id="myFinger">unknown</span> </div>
 <form onsubmit="return false;">
-  <input type="text" name="to" id="tofinger" value="36F8531DABA7C35E2EC5A11007F2251EF48CEF1C841E7430764FDF72179A0942"/>
+  <input type="text" name="to" id="tofinger" value="652AA2406CB9DC8921A892EDE447702752A5337B4CCBD2658E9EE44B35D41001"/>
   <input type="button" value="connect" onclick="makedc();" />
 </form>
 <form onsubmit="return false;">
   <input type="text" name="message" value="Hello, World!"/>
-  <input type="button" value="send" onclick="" />
+  <input type="button" value="send" onclick="chsend()" />
   <h3>Output</h3>
   <textarea id="responseText" style="width: 500px; height:300px;"></textarea>
 

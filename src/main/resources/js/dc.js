@@ -75,7 +75,7 @@ function IpseDataChannel(finger) {
     if (typeof webkitRTCPeerConnection == "function") {
         pc = new webkitRTCPeerConnection(configuration, null);
     } else if (typeof mozRTCPeerConnection == "function") {
-        pc = mozRTCPeerConnection(configuration, null);
+        pc = new mozRTCPeerConnection(configuration, null);
     }
 
 // send everything to the peer - via fingersmith
@@ -101,8 +101,8 @@ function IpseDataChannel(finger) {
         pc.createOffer(function(desc) {
             pc.setLocalDescription(desc, function() {
                 console.log("Set Local description");
-            }, this.logError);
-        }, this.logError, sdpConstraints);
+            }, logError);
+        }, logError, sdpConstraints);
     }
     this.peerCon = pc;
     ws = makeWs(finger);

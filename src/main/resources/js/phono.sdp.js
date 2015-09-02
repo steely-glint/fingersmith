@@ -100,7 +100,7 @@
         var candidate = {
             foundation: params[0],
             component: params[1],
-            protocol: params[2],
+            protocol: params[2].toLowerCase(),
             priority: params[3],
             ip: params[4],
             port: params[5]
