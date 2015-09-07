@@ -22,9 +22,8 @@ import org.mashupbots.socko.events.WebSocketHandshakeEvent
 import org.mashupbots.socko.handlers.{StaticContentHandlerConfig, StaticContentHandler, StaticResourceRequest}
 import org.mashupbots.socko.infrastructure.Logger
 import org.mashupbots.socko.routes._
-import org.mashupbots.socko.webserver.WebServer
-import org.mashupbots.socko.webserver.WebServerConfig
-import akka.actor.{Props, ActorSystem, actorRef2Scala}
+import org.mashupbots.socko.webserver.{SslConfig, WebServer, WebServerConfig}
+import akka.actor._
 import akka.dispatch.OnComplete
 
 /**
@@ -44,11 +43,26 @@ object FingerSmithApp extends Logger {
   // STEP #1 - Define Actors and Start Akka
   // `ChatHandler` is created in the route and is self-terminating
   //
-  val actorConfig = """
+  val password = System.getProperty("keypass")
+  val keystore = System.getProperty("keystore","/project2/westhawk/keys/wildcard/wildwesthawk.ks")
+  val actorConfig = s"""
 	my-pinned-dispatcher {
 	  type=PinnedDispatcher
 	  executor=thread-pool-executor
 	}
+  fingersmith {
+    server-name=fingersmith
+    hostname=0.0.0.0
+    port=9000
+    idle-connection-timeout=0
+    log-network-activity=false
+    web-log {
+    }
+    ssl {
+       key-store-file=$keystore
+       key-store-password=$password
+    }
+  }
 	akka {
 	  event-handlers = ["akka.event.slf4j.Slf4jEventHandler"]
 	  loglevel=DEBUG
@@ -69,7 +83,14 @@ object FingerSmithApp extends Logger {
 	    }
 	  }
 	}"""
-  val actorSystem = ActorSystem("FingersithActorSystem", ConfigFactory.parseString(actorConfig))
+
+  object MyWebServerConfig extends ExtensionId[WebServerConfig] with ExtensionIdProvider {
+    override def lookup = MyWebServerConfig
+    override def createExtension(system: ExtendedActorSystem) =
+      new WebServerConfig(system.settings.config, "fingersmith")
+  }
+
+  val actorSystem = ActorSystem("FingersmithActorSystem", ConfigFactory.parseString(actorConfig))
   val staticContentHandlerRouter = actorSystem.actorOf(Props(new StaticContentHandler(StaticContentHandlerConfig()))
     .withRouter(FromConfig()).withDispatcher("my-pinned-dispatcher"), "static-file-router")
   //
@@ -114,7 +135,10 @@ object FingerSmithApp extends Logger {
     }
 
   })
-  val webServer = new WebServer(WebServerConfig("FingerSmith", "0.0.0.0", 8888), routes, actorSystem)
+  val myWebServerConfig = MyWebServerConfig(actorSystem)
+  val webServer = new WebServer(myWebServerConfig, routes,actorSystem)
+ // webServer.start()
+ // val webServer = new WebServer(WebServerConfig("FingerSmith", "0.0.0.0", 8888), routes, actorSystem)
 
   //
   // STEP #3 - Start and Stop Socko Web Server
