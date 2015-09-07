@@ -13,8 +13,8 @@ function IpseDataChannel(finger) {
         }
         var socket, protocol, host,port;
         protocol = "ws:"
-        if (window.location.protocol === "https"){
-            prot = "wss:"
+        if (window.location.protocol === "https:"){
+            protocol = "wss:"
         }
         host = window.location.host;
         port = "";

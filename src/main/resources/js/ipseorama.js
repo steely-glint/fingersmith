@@ -7,7 +7,7 @@
     Ipseorama = {
         addMyCertToPeerConf: function (peerconf) {
             myCert = localStorage["IpseCert"];
-            if !(myCert){
+            if (!myCert){
                 console.log("")
                 myCert = mozRTCPeerConnection.generateCertificate( { name: "ECDSA", namedCurve: "P-256" })
             }
@@ -21,7 +21,6 @@
             return myfp;
         },
         whoAmI: function(okCB, failCB) {
-            if window.localstore
             var peerconfig = {"iceServers": [{url: "stun:stun.l.google.com:19302"}]};
             var offerCreated = function(localDesc) {
                 var myfp = Ipseorama.getFinger(localDesc.sdp)
