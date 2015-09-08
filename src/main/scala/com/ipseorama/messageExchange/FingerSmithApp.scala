@@ -135,7 +135,8 @@ object FingerSmithApp extends Logger {
     }
 
   })
-  val myWebServerConfig = MyWebServerConfig(actorSystem)
+  //val myWebServerConfig = MyWebServerConfig(actorSystem)
+  val myWebServerConfig = new WebServerConfig();
   val webServer = new WebServer(myWebServerConfig, routes,actorSystem)
  // webServer.start()
  // val webServer = new WebServer(WebServerConfig("FingerSmith", "0.0.0.0", 8888), routes, actorSystem)
