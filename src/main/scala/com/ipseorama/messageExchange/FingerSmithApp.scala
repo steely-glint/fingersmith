@@ -58,10 +58,7 @@ object FingerSmithApp extends Logger {
     log-network-activity=false
     web-log {
     }
-    ssl {
-       key-store-file=$keystore
-       key-store-password=$password
-    }
+
   }
 	akka {
 	  event-handlers = ["akka.event.slf4j.Slf4jEventHandler"]
@@ -83,7 +80,13 @@ object FingerSmithApp extends Logger {
 	    }
 	  }
 	}"""
-
+/*
+    ssl {
+       key-store-file=$keystore
+       key-store-password=$password
+    }
+    next to weblog
+ */
   object MyWebServerConfig extends ExtensionId[WebServerConfig] with ExtensionIdProvider {
     override def lookup = MyWebServerConfig
     override def createExtension(system: ExtendedActorSystem) =
@@ -108,6 +111,10 @@ object FingerSmithApp extends Logger {
       case GET(Path("/index.html")) => {
         // Return HTML page to establish web socket
         staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"index.html")
+      }
+      case GET(Path("/bone.html")) => {
+        // Return HTML page to establish web socket
+        staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"bone.html")
       }
       case PathSegments("js" :: relativePath) => {
         // Serve the static js content from resources
@@ -135,8 +142,8 @@ object FingerSmithApp extends Logger {
     }
 
   })
-  //val myWebServerConfig = MyWebServerConfig(actorSystem)
-  val myWebServerConfig = new WebServerConfig();
+  val myWebServerConfig = MyWebServerConfig(actorSystem)
+  //val myWebServerConfig = new WebServerConfig();
   val webServer = new WebServer(myWebServerConfig, routes,actorSystem)
  // webServer.start()
  // val webServer = new WebServer(WebServerConfig("FingerSmith", "0.0.0.0", 8888), routes, actorSystem)

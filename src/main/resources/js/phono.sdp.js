@@ -379,8 +379,12 @@
             // Iterate the lines
             var sdpLines = sdpString.split("\r\n");
             for (var sdpLine in sdpLines) {
-                Phono.log.debug(sdpLines[sdpLine]);
-                var line = _parseLine(sdpLines[sdpLine]);
+                var sline = sdpLines[sdpLine];
+                Phono.log.debug("line is "+sline);
+                if (typeof sline == "function"){
+                 continue;
+                }
+                var line = _parseLine(sline);
 
                 if (line.type == "o") {
                     contentsObj.session = _parseO(line.contents);
