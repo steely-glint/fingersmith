@@ -1,0 +1,160 @@
+<html><head><title>Socko Web Socket Example</title></head>
+    <script src="/js/jquery-1.8.3.js"></script>
+    <script src="/js/phono.sdp.js"></script>
+    <script src="/js/ipseorama.js"></script>
+    <script src="/js/dc.js"></script>
+    <script src="/js/LazarQr.min.js"></script>
+    <script src="/js/adapter.js"></script>
+
+    <script type="text/javascript">
+  var myFinger = undefined;
+  var ipsed = null;
+  var chout;
+  function gotFinger(finger){
+    myFinger = finger;
+    $('#myFinger').html(finger);
+    ipsed = new IpseDataChannel(finger);
+    ipsed.setOnDataChannel(onNewDc);
+    askforCam();
+  }
+  function onDcMessage(evt){
+      var mess = evt.data;
+      var ts = mess.split(" ")[0];
+      var diff = Date.now() - parseInt(ts);
+      console.log("got dc message after : " + diff);
+
+      $('#responseText').val(evt.data)
+  }
+  function onNewDc(channel){
+      console.log("New DC ")
+      channel.onmessage = onDcMessage;
+  }
+  function makedc(){
+    var tofinger = $('#tofinger').val();
+    console.log("setting toFinger"+tofinger);
+
+    ipsed.setTo(tofinger);
+    var channel = ipsed.createDataChannel("test",{});
+    channel.onopen = function() {
+        // e.g. enable send button
+        //enableChat(channel);
+        console.log("Outbound channel open");
+    };
+    channel.onmessage = onDcMessage;
+    chout = channel;
+  }
+
+  function button(cmd) {
+    chout.send(cmd);
+  }
+
+
+
+            function startQrDecode() {
+                var video = document.getElementById('gumVideo');
+                var photo = document.getElementById('qr-canvas');
+                var context = photo.getContext('2d');
+                // set our canvas to the same size as our video
+
+                qrcode.callback = function(code) {
+                    console.log("got qrcode of " + code);
+                    clearInterval(tick);
+                    navigator.vibrate(50);
+                    $('#tofinger').val(code);
+                    $("#qr-canvas").remove();
+                    $("#gumVideo").css("display","block");
+                };
+                var tick = setInterval(function() {
+                    if ((video.videoWidth > 0) && (video.videoHeight > 0)) {
+                        var rat = video.height / video.videoHeight;
+                        photo.width = video.videoWidth * rat;
+                        photo.height = video.videoHeight * rat;
+                        console.log("set photo to " + photo.width + " x " + photo.height);
+                        console.log("rat was " + rat);
+                        context.drawImage(video, 0, 0, photo.width, photo.height);
+                        qrcode.decode();
+                    }
+                }, 250);
+            }
+            function startGum(sid) {
+                var constraints = {video: true, audio: false};
+                if (sid) {
+                    constraints.video = {optional: [{sourceId: sid}]};
+                }
+                navigator.getUserMedia(constraints,
+                        function(stream) {
+                            var url = window.URL || window.webkitURL;
+                            var v = document.getElementById('gumVideo');
+                            v.src = url ? url.createObjectURL(stream) : stream;
+                            v.play();
+                            startQrDecode();
+                        },
+                        function(error) {
+                            alert('Something went wrong. (error code ' + error.code + ')');
+                            location.href = "nogum.htm";
+                            return;
+                        }
+                );
+            }
+            function onSourcesAcquired(sources) {
+                var sid;
+                for (var i = 0; i != sources.length; ++i) {
+                    var source = sources[i];
+                    console.log(source);
+                    if ((source.kind == "video") && (source.facing == "environment")) {
+                        sid = source.id;
+                        //break;
+                    }
+                    // source.id -> DEVICE ID
+                    // source.label -> DEVICE NAME
+                    // source.kind = "audio" OR "video"
+                    // TODO: add this to some datastructure of yours or a selection dialog
+                }
+                startGum(sid);
+            }
+            function askforCam() {
+                console.log("starting QR reader");
+                //frontcam...
+                var sid;
+                if ((typeof MediaStreamTrack === 'undefined') || (typeof MediaStreamTrack.getSources == 'undefined')) {
+                    startGum(sid);
+                } else {
+                    MediaStreamTrack.getSources(onSourcesAcquired);
+                }
+            }
+
+            $( document ).ready(function() {
+              Ipseorama.whoAmI(gotFinger,function(err) {
+                console.log("could not create identity " + err)
+                });
+            });
+</script>
+<h1>Fingersmith test page</h1>
+<div> My Fingerprint is :
+<span id="myFinger">unknown</span> </div>
+    <div id="remoteVideoContainer" class="ui-video-remote-container">
+        <canvas width="320" height="240" id="qr-canvas"></canvas>
+        <video style="display:none;" width="320" height="240" id="gumVideo" autoplay="autoplay"/>
+    </div>
+<form onsubmit="return false;">
+  <input type="text" name="to" id="tofinger" value="Unknown"/>
+  <input type="button" value="connect" onclick="makedc();" />
+</form>
+<div id="caller">
+    <div id="status"></div>
+    <div id="controls">
+        <button id="connectButton" type="button" value="Forward" onClick="button('F')"  >
+            Forward&nbsp;
+        </button>
+        <button  id="hangupButton" type="button" value="Back" onClick="button('B')" >
+            Back&nbsp;
+        </button>
+        <button  id="wakeButton" type="button" value="Left" onClick="button('L')" >
+            Left&nbsp;
+        </button>
+        <button  id="forgetButton" type="button" value="Right" onClick="button('R')" >
+            Right&nbsp;
+    </div>
+</div>
+</body>
+</html>
