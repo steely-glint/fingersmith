@@ -3,33 +3,35 @@ function IpseDataChannel(finger) {
     var ws = null;
     var session;
     var toFinger;
-    var makeWs = function(finger){
+    var that = this;
+
+    var makeWs = function(finger) {
         if (!window.WebSocket) {
             window.WebSocket = window.MozWebSocket;
         }
         if (!window.WebSocket) {
             alert("Your browser does not support Web Sockets.");
-            return ;
+            return;
         }
-        var socket, protocol, host,port;
+        var socket, protocol, host, port;
         protocol = "ws:"
-        if (window.location.protocol === "https:"){
+        if (window.location.protocol === "https:") {
             protocol = "wss:"
         }
         host = window.location.host;
         port = "";
-        if (window.location.port != ""){
-            port = ":"+window.location.port
+        if (window.location.port != "") {
+            port = ":" + window.location.port
         }
-        socket = new WebSocket(protocol+"//"+host+"/websocket/?finger="+finger);
+        socket = new WebSocket(protocol + "//" + host + "/websocket/?finger=" + finger);
         session = "new"; // fix this
 
-        socket.onopen = function(event){
+        socket.onopen = function(event) {
             console.log("wsopen " + JSON.stringify(event));
         };
-        socket.onclose = function(event){
+        socket.onclose = function(event) {
             console.log("wsclose " + JSON.stringify(event));
-            ws=null;
+            ws = null;
         };
         socket.onmessage = function(event) {
             console.log("message is " + event.data);
@@ -44,19 +46,19 @@ function IpseDataChannel(finger) {
                 var rtcd = new RTCSessionDescription(message);
                 console.log("rtcd is " + rtcd);
                 pc.setRemoteDescription(rtcd, function() {
-                    console.log("set "+data.type+" ok");
-                    if (data.type == 'offer'){
-                            var theirfp = JSON.stringify(data.sdp.contents[0].fingerprint.print);
-                            theirfp = theirfp.split(":").join("");
-                            theirfp = theirfp.split('"').join("");
-                            console.log("their fingerprint is " + theirfp)
-                            that.setTo(theirfp);
-                            var sdpConstraints = {'mandatory': {'OfferToReceiveAudio': false, 'OfferToReceiveVideo': false}}
-                            pc.createAnswer(function(desc) {
-                                pc.setLocalDescription(desc, function() {
-                                    console.log("Set Local description "+ JSON.stringify(desc));
-                                }, this.logError);
-                            }, this.logError, sdpConstraints);
+                    console.log("set " + data.type + " ok");
+                    if (data.type == 'offer') {
+                        var theirfp = JSON.stringify(data.sdp.contents[0].fingerprint.print);
+                        theirfp = theirfp.split(":").join("");
+                        theirfp = theirfp.split('"').join("");
+                        console.log("their fingerprint is " + theirfp)
+                        that.setTo(theirfp);
+                        var sdpConstraints = {'mandatory': {'OfferToReceiveAudio': false, 'OfferToReceiveVideo': false}}
+                        pc.createAnswer(function(desc) {
+                            pc.setLocalDescription(desc, function() {
+                                console.log("Set Local description " + JSON.stringify(desc));
+                            }, this.logError);
+                        }, this.logError, sdpConstraints);
                     }
                 }, logError);
             } else {
@@ -68,44 +70,53 @@ function IpseDataChannel(finger) {
     var logError = function(error) {
         console.log(error.name + ": " + error.message);
     };
+
+    var withPc = function(pc) {
+// send everything to the peer - via fingersmith
+        pc.onicecandidate = function(evt) {
+            if (evt.candidate === null) {
+                var sdpObj = Phono.sdp.parseSDP(pc.localDescription.sdp);
+                console.log("this.toFinger:" + this.toFinger);
+                console.log("toFinger:" + toFinger);
+                console.log("that.toFinger:" + that.toFinger);
+
+                var sdpcontext = {"to": that.toFinger, "type": pc.localDescription.type, "sdp": sdpObj, "session": session};
+                console.log("sending:" + JSON.stringify(sdpcontext))
+
+                that.ws.send(JSON.stringify(sdpcontext));
+            } else {
+                console.log("ignoring local trickling candidates for now")
+            }
+        };
+        // let the "negotiationneeded" event trigger offer generation
+        pc.onnegotiationneeded = function() {
+            var sdpConstraints = {'mandatory': {'OfferToReceiveAudio': false, 'OfferToReceiveVideo': false}}
+            pc.createOffer(function(desc) {
+                pc.setLocalDescription(desc, function() {
+                    console.log("Set Local description");
+                }, logError);
+            }, logError, sdpConstraints);
+        }
+        that.peerCon = pc;
+        pc.ondatachannel = function(evt){
+            if (that.ondatachannel){
+                that.ondatachannel(evt);
+            }
+        };
+        that.ws = makeWs(finger);
+    }
     var configuration = {"iceServers": [
             {url: "stun:stun.l.google.com:19302"}//,
         ]};
-    var pc;
     if (typeof webkitRTCPeerConnection == "function") {
-        pc = new webkitRTCPeerConnection(configuration, null);
+        var pc = new webkitRTCPeerConnection(configuration, null);
+        withPc(pc);
     } else if (typeof mozRTCPeerConnection == "function") {
-        pc = new mozRTCPeerConnection(configuration, null);
+        Ipseorama.addMyCertToPeerConf(configuration, function() {
+            var mozpc = new mozRTCPeerConnection(configuration, null)
+            withPc(mozpc);
+        });
     }
-
-// send everything to the peer - via fingersmith
-    var that = this;
-    pc.onicecandidate = function(evt) {
-        if (evt.candidate === null) {
-            var sdpObj = Phono.sdp.parseSDP(pc.localDescription.sdp);
-            console.log("this.toFinger:"+this.toFinger);
-            console.log("toFinger:"+toFinger);
-            console.log("that.toFinger:"+that.toFinger);
-
-            var sdpcontext = {"to":that.toFinger, "type": pc.localDescription.type, "sdp": sdpObj, "session":session};
-            console.log("sending:"+JSON.stringify(sdpcontext))
-
-            ws.send(JSON.stringify(sdpcontext));
-        } else {
-            console.log("ignoring local trickling candidates for now")
-        }
-    };
-    // let the "negotiationneeded" event trigger offer generation
-    pc.onnegotiationneeded = function() {
-        var sdpConstraints = {'mandatory': {'OfferToReceiveAudio': false, 'OfferToReceiveVideo': false}}
-        pc.createOffer(function(desc) {
-            pc.setLocalDescription(desc, function() {
-                console.log("Set Local description");
-            }, logError);
-        }, logError, sdpConstraints);
-    }
-    this.peerCon = pc;
-    ws = makeWs(finger);
 }
 
 IpseDataChannel.prototype.createDataChannel = function(name, props) {
@@ -115,11 +126,11 @@ IpseDataChannel.prototype.setTo = function(tof) {
     this.toFinger = tof;
     var d = new Date();
     var n = d.getTime();
-    this.session = this.finger+"-"+tof+"-"+n; // fix this
-    console.log("this.toFinger:"+this.toFinger);
+    this.session = this.finger + "-" + tof + "-" + n; // fix this
+    console.log("this.toFinger:" + this.toFinger);
 }
 IpseDataChannel.prototype.setOnDataChannel = function(callback) {
-    this.peerCon.ondatachannel = function(evt) {
+    this.ondatachannel = function(evt) {
         callback(evt.channel);
     };
 }

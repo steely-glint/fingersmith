@@ -18,7 +18,11 @@
     askforCam();
   }
   function onDcMessage(evt){
-      console.log(" got dc message: " + evt.data);
+      var mess = evt.data;
+      var ts = mess.split(" ")[0];
+      var diff = Date.now() - parseInt(ts);
+      console.log("got dc message after : " + diff);
+
       $('#responseText').val(evt.data)
   }
   function onNewDc(channel){
@@ -37,7 +41,7 @@
         console.log("Outbound channel ");
         var i = 1;
         timer = setInterval(function() {
-            var mess = " message " + i;
+            var mess = ""+ Date.now();
             console.log("sending " + mess);
             channel.send(mess);
             i++;
