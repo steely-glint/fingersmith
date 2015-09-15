@@ -18,12 +18,7 @@
     askforCam();
   }
   function onDcMessage(evt){
-      var mess = evt.data;
-      var ts = mess.split(" ")[0];
-      var diff = Date.now() - parseInt(ts);
-      console.log("got dc message after : " + diff);
-
-      $('#responseText').val(evt.data)
+      $('#status').html(evt.data)
   }
   function onNewDc(channel){
       console.log("New DC ")
