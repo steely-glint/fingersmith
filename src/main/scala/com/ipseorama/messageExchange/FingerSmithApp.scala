@@ -58,8 +58,12 @@ object FingerSmithApp extends Logger {
     log-network-activity=false
     web-log {
     }
-
+    ssl {
+       key-store-file=$keystore
+       key-store-password=$password
+    }
   }
+
 	akka {
 	  event-handlers = ["akka.event.slf4j.Slf4jEventHandler"]
 	  loglevel=DEBUG

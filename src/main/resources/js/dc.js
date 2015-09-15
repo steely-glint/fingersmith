@@ -3,6 +3,7 @@ function IpseDataChannel(finger) {
     var ws = null;
     var session;
     var toFinger;
+    var peerCon;
     var that = this;
 
     var makeWs = function(finger) {
@@ -40,10 +41,16 @@ function IpseDataChannel(finger) {
             console.log("data is " + JSON.stringify(data));
 
             if (data.session) {
+                var pc = that.peerCon;
                 var sdp = Phono.sdp.buildSDP(data.sdp);
                 console.log("answer sdp is " + sdp);
                 var message = {'sdp': sdp, 'type': data.type};
-                var rtcd = new RTCSessionDescription(message);
+                var rtcd;
+                if (typeof mozRTCSessionDescription == "function") {
+                    rtcd = new mozRTCSessionDescription(message);
+                } else {
+                    rtcd = new RTCSessionDescription(message);
+                }
                 console.log("rtcd is " + rtcd);
                 pc.setRemoteDescription(rtcd, function() {
                     console.log("set " + data.type + " ok");
@@ -53,14 +60,19 @@ function IpseDataChannel(finger) {
                         theirfp = theirfp.split('"').join("");
                         console.log("their fingerprint is " + theirfp)
                         that.setTo(theirfp);
-                        var sdpConstraints = {'mandatory': {'OfferToReceiveAudio': false, 'OfferToReceiveVideo': false}}
                         pc.createAnswer(function(desc) {
                             pc.setLocalDescription(desc, function() {
                                 console.log("Set Local description " + JSON.stringify(desc));
-                            }, this.logError);
-                        }, this.logError, sdpConstraints);
+                            }, function(e) {
+                                console.log("Set Local description error "+e);
+                            });
+                        }, function(e) {
+                             console.log("Create answer error "+e );
+                        });
                     }
-                }, logError);
+                }, function(e) {
+                        console.log("Set Remote description error "+e);
+                });
             } else {
                 console.log("no session in my data");
             }

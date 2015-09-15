@@ -166,6 +166,15 @@
         }
         return codec;
     }
+    // a=sctpmap:5000 webrtc-datachannel 256
+    _parseSctpmap = function(params){
+        var dc = {
+            port: params[0],
+            app: params[1],
+            count: params[2]
+        }
+        return dc;
+    }
 
     _parseSsrc = function(params, ssrc) {
         var ssrcObj = {};
@@ -237,6 +246,10 @@
             sdp = sdp + " generation " + c.generation;
         sdp = sdp + "\r\n";
         return sdp;
+    }
+
+    _buildSctpmap = function(sctpObj){
+        return "a=sctpmap:"+sctpObj.port + " " + sctpObj.app + " " + sctpObj.count + "\r\n";
     }
 
     _buildCodec = function(codecObj) {
@@ -343,6 +356,13 @@
             cdi = cdi + 1;
         }
 
+        var sdi = 0;
+        while (sdi + 1 <= sdpObj.sctpmap.length) {
+              sdp = sdp + _buildSctpmap(sdpObj.sctpmap[sdi]);
+              sdi = sdi + 1;
+        }
+
+
         if (sdpObj.ssrc) {
             var ssrc = sdpObj.ssrc;
             if (ssrc.cname)
@@ -396,6 +416,7 @@
                     sdpObj = {};
                     sdpObj.candidates = [];
                     sdpObj.codecs = [];
+                    sdpObj.sctpmap = [];
                     sdpObj.ice = sessionSDP.ice;
                     if (sessionSDP.fingerprint != null) {
                         sdpObj.fingerprint = sessionSDP.fingerprint;
@@ -469,6 +490,11 @@
                             break;
                         case "ice-options":
                             sdpObj.ice.options = a.params[0];
+                            break;
+                        case "sctpmap":
+                            var sctp = _parseSctpmap(a.params);
+                            if (sctp)
+                                sdpObj.sctpmap.push(sctp)
                             break;
                     }
                 }
