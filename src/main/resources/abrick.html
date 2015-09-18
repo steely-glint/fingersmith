@@ -5,11 +5,15 @@
     <script src="/js/dc.js"></script>
     <script src="/js/LazarQr.min.js"></script>
     <script src="/js/adapter.js"></script>
+    <script src="/js/gauge.min.js"></script>
 
     <script type="text/javascript">
   var myFinger = undefined;
   var ipsed = null;
   var chout;
+  var distance;
+  var battery;
+  var heading;
 
 
   function gotFarFinger(ff){
@@ -30,8 +34,51 @@
         gotFarFinger(farFinger);
     }
   }
+  function makeGauge(id){
+    var opts = {
+        lines: 12, // The number of lines to draw
+        angle: 0.15, // The length of each line
+        lineWidth: 0.44, // The line thickness
+        pointer: {
+            length: 0.9, // The radius of the inner circle
+            strokeWidth: 0.035, // The rotation offset
+            color: '#000000' // Fill color
+        },
+        limitMax: 'true',   // If true, the pointer will not go past the end of the gauge
+        colorStart: '#6FADCF',   // Colors
+        colorStop: '#8FC0DA',    // just experiment with them
+        strokeColor: '#E0E0E0',   // to see which ones work best for you
+        generateGradient: true
+    };
+    var target = document.getElementById(id); // your canvas element
+    var gauge = new Gauge(target).setOptions(opts); // create sexy gauge!
+    gauge.animationSpeed = 32; // set animation speed (32 is default value)
+    return gauge;
+  }
+
   function onDcMessage(evt){
-      $('#status').html(evt.data)
+      var mess = JSON.parse(evt.data);
+      if (mess.stats) {
+        var stats = mess.stats;
+        console.log(JSON.stringify(stats));
+        if (stats.distance > 0){
+            $('#distance').html(stats.distance);
+            distance.set(stats.distance * 1000);
+        }
+        $('#voltage').html(stats.voltage);
+        $('#heading').html(stats.heading);
+        $('#tacho').html(stats.tacho);
+        $('#touch').html(stats.touch[0]);
+
+        var r = Math.round( 1096.0 * stats.color[0]);
+        var g = Math.round( 1096.0 * stats.color[1]);
+        var b = Math.round( 1096.0 * stats.color[2]);
+        $('#color').html(" "+r+" "+g+" "+b);
+        heading.set(stats.heading * -1);
+        battery.set(stats.voltage);
+      } else {
+        $('#status').html(evt.data);
+      }
   }
   function onNewDc(channel){
       console.log("New DC ")
@@ -47,6 +94,8 @@
         // e.g. enable send button
         //enableChat(channel);
         console.log("Outbound channel open");
+        $("#remoteVideoContainer").remove();
+        chout.send("A");
     };
     channel.onmessage = onDcMessage;
     chout = channel;
@@ -55,96 +104,6 @@
   function button(cmd) {
     chout.send(cmd);
   }
-
-function chop (ctx, w, h) {
-    var mean=0 ,x,y,
-        dstData = ctx.createImageData(w, h),
-        dstBuff = dstData.data,
-        srcBuff = ctx.getImageData(0, 0, w, h).data;
-        y=h;
-        while (y--) {
-            x = w;
-            while (x--) {
-                var dstOff = (y * w + x) * 4;
-                mean += srcBuff[dstOff] + srcBuff[dstOff + 1] + srcBuff[dstOff + 2];
-            }
-        }
-        mean = mean / (w *h);
-        console.log ("mean = "+ mean);
-        y=h;
-        while (y--) {
-            x = w;
-            while (x--) {
-                var dstOff = (y * w + x) * 4,
-                pix = srcBuff[dstOff] + srcBuff[dstOff + 1] + srcBuff[dstOff + 2];
-                if (pix < mean){
-                    v = 0;
-                } else {
-                    v = 255;
-                }
-                dstBuff[dstOff] = v;
-                dstBuff[dstOff + 1] = v;
-                dstBuff[dstOff + 2] = v;
-                dstBuff[dstOff + 3] = srcBuff[dstOff + 3];
-            }
-        }
-    ctx.putImageData(dstData, 0, 0);
-
-}
-
-function sharpen(ctx, w, h, mix) {
-
-    var weights = [0, -1, 0, -1, 5, -1, 0, -1, 0],
-        katet = Math.round(Math.sqrt(weights.length)),
-        half = (katet * 0.5) | 0,
-        dstData = ctx.createImageData(w, h),
-        dstBuff = dstData.data,
-        srcBuff = ctx.getImageData(0, 0, w, h).data,
-        y = h;
-
-    while (y--) {
-
-        x = w;
-
-        while (x--) {
-
-            var sy = y,
-                sx = x,
-                dstOff = (y * w + x) * 4,
-                r = 0,
-                g = 0,
-                b = 0,
-                a = 0;
-
-            for (var cy = 0; cy < katet; cy++) {
-                for (var cx = 0; cx < katet; cx++) {
-
-                    var scy = sy + cy - half;
-                    var scx = sx + cx - half;
-
-                    if (scy >= 0 && scy < h && scx >= 0 && scx < w) {
-
-                        var srcOff = (scy * w + scx) * 4;
-                        var wt = weights[cy * katet + cx];
-
-                        r += srcBuff[srcOff] * wt;
-                        g += srcBuff[srcOff + 1] * wt;
-                        b += srcBuff[srcOff + 2] * wt;
-                        a += srcBuff[srcOff + 3] * wt;
-                    }
-                }
-            }
-
-            dstBuff[dstOff] = r * mix + srcBuff[dstOff] * (1 - mix);
-            dstBuff[dstOff + 1] = g * mix + srcBuff[dstOff + 1] * (1 - mix);
-            dstBuff[dstOff + 2] = b * mix + srcBuff[dstOff + 2] * (1 - mix)
-            dstBuff[dstOff + 3] = srcBuff[dstOff + 3];
-        }
-    }
-
-    ctx.putImageData(dstData, 0, 0);
-}
-
 
             function startQrDecode() {
                 var video = document.getElementById('gumVideo');
@@ -165,14 +124,9 @@ function sharpen(ctx, w, h, mix) {
 
                         photo.width = video.videoWidth * rat;
                         photo.height = video.videoHeight * rat;
-                        //video.width = video.videoWidth;
-                        //video.height = video.videoHeight;
                         console.log("set video to " + video.width + " x " + video.height);
                         console.log("rat was " + rat);
                         context.drawImage(video, 0, 0, photo.width, photo.height,0,0,photo.width, photo.height);
-                        //sharpen(context, photo.width, photo.height, 1.0) ;
-                        //chop(context, photo.width, photo.height) ;
-
                         qrcode.decode();
                     }
                 }, 250);
@@ -250,6 +204,13 @@ function sharpen(ctx, w, h, mix) {
               Ipseorama.whoAmI(gotFinger,function(err) {
                 console.log("could not create identity " + err)
                 });
+              heading = makeGauge("headingG");
+              heading.maxValue = 90; heading.minValue = -90;
+              battery = makeGauge("batteryG");
+              battery.maxValue = 9; battery.minValue = 5;
+              distance = makeGauge("distanceG");
+              distance.maxValue = 100; distance.minValue = 0;
+
             });
 </script>
 <h1>Fingersmith test page</h1>
@@ -259,12 +220,25 @@ function sharpen(ctx, w, h, mix) {
         <canvas width="480" height="480" id="qr-canvas"></canvas>
         <video style="display:none;" width="480" height="480" id="gumVideo" autoplay="autoplay"/>
     </div>
+<div id="gaugeContainer">
+    <canvas width="300" height="300" id="batteryG"></canvas>
+    <canvas width="300" height="300" id="headingG"></canvas>
+    <canvas width="300" height="300" id="distanceG"></canvas>
+</div>
 <form onsubmit="return false;">
   <input type="text" name="to" id="tofinger" value="Unknown"/>
   <input type="button" value="connect" onclick="makedc();" />
 </form>
 <div id="caller">
-    <div id="status"></div>
+    <ul>
+    Distance <li id="distance"></li>
+    Voltage <li id="voltage"></li>
+    Heading <li id="heading"></li>
+    Tacho <li id="tacho"></li>
+    Color <li id="color"></li>
+    Touch <li id="touch"></li>
+
+    </ul>
     <div id="controls">
         <button id="connectButton" type="button" value="Forward" onClick="button('F')"  >
             Forward&nbsp;
@@ -277,7 +251,9 @@ function sharpen(ctx, w, h, mix) {
         </button>
         <button  id="forgetButton" type="button" value="Right" onClick="button('R')" >
             Right&nbsp;
+        </button>
     </div>
+    <div id="status"></div>
 </div>
 </body>
 </html>
