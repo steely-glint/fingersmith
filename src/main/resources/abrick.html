@@ -5,7 +5,7 @@
     <script src="/js/dc.js"></script>
     <script src="/js/LazarQr.min.js"></script>
     <script src="/js/adapter.js"></script>
-    <script src="/js/gauge.min.js"></script>
+    <script src="/js/gauge.js"></script>
 
     <script type="text/javascript">
   var myFinger = undefined;
@@ -14,6 +14,7 @@
   var distance;
   var battery;
   var heading;
+  var prequel = true;
 
 
   function gotFarFinger(ff){
@@ -34,25 +35,26 @@
         gotFarFinger(farFinger);
     }
   }
-  function makeGauge(id){
+  function makeGauge(id,min,max,unit,title,ticks,format,zero,high){
     var opts = {
-        lines: 12, // The number of lines to draw
-        angle: 0.15, // The length of each line
-        lineWidth: 0.44, // The line thickness
-        pointer: {
-            length: 0.9, // The radius of the inner circle
-            strokeWidth: 0.035, // The rotation offset
-            color: '#000000' // Fill color
-        },
-        limitMax: 'true',   // If true, the pointer will not go past the end of the gauge
-        colorStart: '#6FADCF',   // Colors
-        colorStop: '#8FC0DA',    // just experiment with them
-        strokeColor: '#E0E0E0',   // to see which ones work best for you
-        generateGradient: true
+        renderTo: id,
+        width :300,
+        height :300,
+        title : title,
+        minValue : min,
+        maxValue :max,
+        value:zero,
+        majorTicks :ticks,
+        animation : false,
+        //highlights: high,
+    //minorTicks - {Integer} - number of minor ticks to draw between major ticks on a gauge bar. Default is 10.
+    //strokeTicks - {Boolean} - the flag which identifies if the ticks bar should be stroked or not. By default is true.
+        units : unit,
+        valueFormat:  format // { int : 3, dec : 2 }
     };
-    var target = document.getElementById(id); // your canvas element
-    var gauge = new Gauge(target).setOptions(opts); // create sexy gauge!
-    gauge.animationSpeed = 32; // set animation speed (32 is default value)
+    var gauge = new Gauge(opts); // create sexy gauge!
+    gauge.draw();
+
     return gauge;
   }
 
@@ -62,11 +64,14 @@
         var stats = mess.stats;
         console.log(JSON.stringify(stats));
         if (stats.distance > 0){
-            $('#distance').html(stats.distance);
-            distance.set(stats.distance * 1000);
+            var d= stats.distance * 1000.0
+            $('#distance').html("cm :"+d);
+            distance.setValue(d);
         }
-        $('#voltage').html(stats.voltage);
-        $('#heading').html(stats.heading);
+        var v = stats.voltage * 1.0;
+        var h = stats.heading * -1.0;
+        $('#voltage').html("volts :"+v);
+        $('#heading').html("deg :"+h);
         $('#tacho').html(stats.tacho);
         $('#touch').html(stats.touch[0]);
 
@@ -74,8 +79,8 @@
         var g = Math.round( 1096.0 * stats.color[1]);
         var b = Math.round( 1096.0 * stats.color[2]);
         $('#color').html(" "+r+" "+g+" "+b);
-        heading.set(stats.heading * -1);
-        battery.set(stats.voltage);
+        heading.setValue(h);
+        battery.setValue(v);
       } else {
         $('#status').html(evt.data);
       }
@@ -95,7 +100,9 @@
         //enableChat(channel);
         console.log("Outbound channel open");
         $("#remoteVideoContainer").remove();
+        $("#controls").css("display","block");
         chout.send("A");
+        prequel = false;
     };
     channel.onmessage = onDcMessage;
     chout = channel;
@@ -204,14 +211,22 @@
               Ipseorama.whoAmI(gotFinger,function(err) {
                 console.log("could not create identity " + err)
                 });
-              heading = makeGauge("headingG");
-              heading.maxValue = 90; heading.minValue = -90;
-              battery = makeGauge("batteryG");
-              battery.maxValue = 9; battery.minValue = 5;
-              distance = makeGauge("distanceG");
-              distance.maxValue = 100; distance.minValue = 0;
-
+              var hhigh = [{ from: -15, to: +15, color: '#0e0' }, { from: -60, to: -15, color: '#844' }, { from: 15, to: 60, color: '#844' }]
+              heading = makeGauge("headingG",-60.0,60.0,"deg","Heading",[-60,-45,-30,-15,0,+15,+30,+45,60],{ int : 2, dec : 0 },0.0,hhigh);
+              var bhigh = [{ from: 5.0, to: 6.1, color: '#e00' }, { from: 6.1, to: 7.0, color: '#ccc' }, { from: 7.0, to: 9.0, color: '#0a0' }];
+              battery = makeGauge("batteryG",5.0,9.0,"V","Battery",[5.0,5.5,6,6.5,7,7.5,8,8.5,9.0],{ int : 1, dec : 1 },5.5,bhigh );
+              dhigh = [{ from: 0, to: 60, color: '#e00' }, { from: 60, to: 80, color: '#ccc' }, { from: 80, to: 100, color: '#999' }]
+              distance = makeGauge("distanceG",0.0,100.0,"cm","Range",[0,10,20,30,40,50,60,70,80,90,100],{ int : 2, dec : 0 },0.0,dhigh);
+              /*var count = 0;
+              setInterval( function() {
+                if (prequel){
+                    var v = 5.1 + ((count % 8) *0.5 );
+                    battery.setValue(v);
+                    count++;
+                }
+               }, 1000);*/
             });
+
 </script>
 <h1>Fingersmith test page</h1>
 <div> My Fingerprint is :
@@ -231,15 +246,11 @@
 </form>
 <div id="caller">
     <ul>
-    Distance <li id="distance"></li>
-    Voltage <li id="voltage"></li>
-    Heading <li id="heading"></li>
     Tacho <li id="tacho"></li>
     Color <li id="color"></li>
     Touch <li id="touch"></li>
-
     </ul>
-    <div id="controls">
+    <div id="controls" style="display:none;">
         <button id="connectButton" type="button" value="Forward" onClick="button('F')"  >
             Forward&nbsp;
         </button>
