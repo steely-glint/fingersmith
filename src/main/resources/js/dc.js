@@ -63,6 +63,9 @@ function IpseDataChannel(finger) {
                         pc.createAnswer(function(desc) {
                             pc.setLocalDescription(desc, function() {
                                 console.log("Set Local description " + JSON.stringify(desc));
+                                if (window.showStatus){
+                                   showStatus("Got Answer");
+                                }
                             }, function(e) {
                                 console.log("Set Local description error "+e);
                             });
@@ -96,8 +99,14 @@ function IpseDataChannel(finger) {
                 console.log("sending:" + JSON.stringify(sdpcontext))
 
                 that.ws.send(JSON.stringify(sdpcontext));
+                if (window.showStatus){
+                    showStatus("Sent offer.");
+                }
             } else {
                 console.log("ignoring local trickling candidates for now")
+                if (window.showStatus){
+                    showStatus("Gathering candidates.");
+                }
             }
         };
         // let the "negotiationneeded" event trigger offer generation
