@@ -35,7 +35,7 @@ IpseDataChannel.prototype.makeWSUrl = function () {
     return (protocol + "//" + host + "/websocket/?finger=")
 };
 
-IpseDataChannel.prototype.makeWs = function (finger) {
+IpseDataChannel.prototype.makeWs = function () {
     var socket;
     if (!window.WebSocket) {
         window.WebSocket = window.MozWebSocket;
@@ -45,7 +45,7 @@ IpseDataChannel.prototype.makeWs = function (finger) {
         return;
     }
 
-    socket = new WebSocket(this.wssUrl + finger);
+    socket = new WebSocket(this.wssUrl + this.finger);
 
     socket.onopen = function (event) {
         console.log("wsopen " + JSON.stringify(event));
@@ -113,9 +113,8 @@ IpseDataChannel.prototype.withPc = function (pc) {
         if (evt.candidate === null) {
             var sdpObj = Phono.sdp.parseSDP(pc.localDescription.sdp);
             console.log("this.toFinger:" + this.toFinger);
-            console.log("toFinger:" + toFinger);
 
-            var sdpcontext = {"to": this.toFinger, "type": pc.localDescription.type, "sdp": sdpObj, "session": session};
+            var sdpcontext = {"to": this.toFinger, "type": pc.localDescription.type, "sdp": sdpObj, "session": this.session};
             console.log("sending:" + JSON.stringify(sdpcontext))
 
             this.ws.send(JSON.stringify(sdpcontext));
@@ -145,9 +144,9 @@ IpseDataChannel.prototype.withPc = function (pc) {
         }
     };
     if (this.wssUrl == undefined) {
-        this.wssUrl = makeWSUrl();
+        this.wssUrl = this.makeWSUrl();
     }
-    this.ws = this.makeWs(finger);
+    this.ws = this.makeWs();
 }
 ;
 
