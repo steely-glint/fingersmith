@@ -12,11 +12,11 @@ var IpseDataChannel = function (finger, wssLoc) {
     };
     if (typeof webkitRTCPeerConnection == "function") {
         var pc = new webkitRTCPeerConnection(configuration, null);
-        withPc(pc);
+        this.withPc(pc);
     } else if (typeof mozRTCPeerConnection == "function") {
         Ipseorama.addMyCertToPeerConf(configuration, function () {
             var mozpc = new mozRTCPeerConnection(configuration, null)
-            withPc(mozpc);
+            this.withPc(mozpc);
         });
     }
 };
@@ -45,7 +45,6 @@ IpseDataChannel.prototype.makeWs = function (finger) {
         return;
     }
 
-    session = "new"; // fix this
     socket = new WebSocket(this.wssUrl + finger);
 
     socket.onopen = function (event) {
@@ -53,7 +52,7 @@ IpseDataChannel.prototype.makeWs = function (finger) {
     };
     socket.onclose = function (event) {
         console.log("wsclose " + JSON.stringify(event));
-        ws = null;
+        this.ws = null;
     };
     socket.onmessage = function (event) {
         console.log("message is " + event.data);
