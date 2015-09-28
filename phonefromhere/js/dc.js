@@ -37,6 +37,8 @@ IpseDataChannel.prototype.makeWSUrl = function () {
 
 IpseDataChannel.prototype.makeWs = function () {
     var socket;
+    var that = this;
+
     if (!window.WebSocket) {
         window.WebSocket = window.MozWebSocket;
     }
@@ -61,7 +63,7 @@ IpseDataChannel.prototype.makeWs = function () {
         console.log("data is " + JSON.stringify(data));
 
         if (data.session) {
-            var pc = this.peerCon;
+            var pc = that.peerCon;
             var sdp = Phono.sdp.buildSDP(data.sdp);
             console.log("answer sdp is " + sdp);
             var message = {'sdp': sdp, 'type': data.type};
@@ -79,7 +81,7 @@ IpseDataChannel.prototype.makeWs = function () {
                     theirfp = theirfp.split(":").join("");
                     theirfp = theirfp.split('"').join("");
                     console.log("their fingerprint is " + theirfp)
-                    this.setTo(theirfp);
+                    that.setTo(theirfp);
                     pc.createAnswer(function (desc) {
                         pc.setLocalDescription(desc, function () {
                             console.log("Set Local description " + JSON.stringify(desc));
