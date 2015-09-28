@@ -1,20 +1,13 @@
-function IpseDataChannel(finger) {
-    var loc = window.location
+function IpseDataChannel(finger,wssLoc) {
     var ws = null;
     var session;
     var toFinger;
     var peerCon;
     var that = this;
+    var wssUrl = wssLoc;
 
-    var makeWs = function(finger) {
-        if (!window.WebSocket) {
-            window.WebSocket = window.MozWebSocket;
-        }
-        if (!window.WebSocket) {
-            alert("Your browser does not support Web Sockets.");
-            return;
-        }
-        var socket, protocol, host, port;
+    var makeWSUrl = function() {
+        var protocol, host, port;
         protocol = "ws:"
         if (window.location.protocol === "https:") {
             protocol = "wss:"
@@ -23,9 +16,23 @@ function IpseDataChannel(finger) {
         port = "";
         if (window.location.port != "") {
             port = ":" + window.location.port
+
         }
-        socket = new WebSocket(protocol + "//" + host + "/websocket/?finger=" + finger);
+        return (protocol + "//" + host + "/websocket/?finger=")
+    }
+
+    var makeWs = function(finger) {
+        var socket;
+        if (!window.WebSocket) {
+            window.WebSocket = window.MozWebSocket;
+        }
+        if (!window.WebSocket) {
+            alert("Your browser does not support Web Sockets.");
+            return;
+        }
+
         session = "new"; // fix this
+        socket = new WebSocket(wssUrl + finger);
 
         socket.onopen = function(event) {
             console.log("wsopen " + JSON.stringify(event));
@@ -124,6 +131,9 @@ function IpseDataChannel(finger) {
                 that.ondatachannel(evt);
             }
         };
+        if (!that.wssUrl){
+            that.wssUrl = makeWSUrl();
+        }
         that.ws = makeWs(finger);
     }
     var configuration = {"iceServers": [
