@@ -134,8 +134,8 @@ IpseDataChannel.prototype.withPc = function (pc) {
         pc.createOffer(function (desc) {
             pc.setLocalDescription(desc, function () {
                 console.log("Set Local description");
-            }, logError);
-        }, logError, sdpConstraints);
+            }, this.logError);
+        }, this.logError, sdpConstraints);
     }
     this.peerCon = pc;
     pc.ondatachannel = function (evt) {
