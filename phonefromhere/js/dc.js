@@ -32,7 +32,7 @@ function IpseDataChannel(finger,wssLoc) {
         }
 
         session = "new"; // fix this
-        socket = new WebSocket(wssUrl + finger);
+        socket = new WebSocket(that.wssUrl + finger);
 
         socket.onopen = function(event) {
             console.log("wsopen " + JSON.stringify(event));
