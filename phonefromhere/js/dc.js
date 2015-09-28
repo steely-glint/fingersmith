@@ -107,48 +107,57 @@ IpseDataChannel.prototype.logError = function (error) {
     console.log(error.name + ": " + error.message);
 };
 
+IpseDataChannel.prototype.onnegotiationneeded = function () {
+    var sdpConstraints = {'mandatory': {'OfferToReceiveAudio': false, 'OfferToReceiveVideo': false}}
+    this.peerCon.createOffer(function (desc) {
+        this.peerCon.setLocalDescription(desc, function () {
+            console.log("Set Local description");
+        }, this.logError);
+    }, this.logError, sdpConstraints);
+}
+
+IpseDataChannel.prototype.ondatachannel = function (evt) {
+    if (this.ondatachannel) {
+        this.ondatachannel(evt);
+    }
+};
+
+IpseDataChannel.prototype.onicecandidate = function (evt) {
+    if (evt.candidate === null) {
+        var sdpObj = Phono.sdp.parseSDP(this.peerCon.localDescription.sdp);
+        console.log("this.toFinger:" + this.toFinger);
+
+        var sdpcontext = {
+            "to": this.toFinger,
+            "type": this.peerCon.localDescription.type,
+            "sdp": sdpObj,
+            "session": this.session
+        };
+        console.log("sending:" + JSON.stringify(sdpcontext))
+
+        this.ws.send(JSON.stringify(sdpcontext));
+        if (window.showStatus) {
+            showStatus("Sent offer.");
+        }
+    } else {
+        console.log("ignoring local trickling candidates for now")
+        if (window.showStatus) {
+            showStatus("Gathering candidates.");
+        }
+    }
+};
+
 IpseDataChannel.prototype.withPc = function (pc) {
 // send everything to the peer - via fingersmith
-    pc.onicecandidate = function (evt) {
-        if (evt.candidate === null) {
-            var sdpObj = Phono.sdp.parseSDP(pc.localDescription.sdp);
-            console.log("this.toFinger:" + this.toFinger);
-
-            var sdpcontext = {"to": this.toFinger, "type": pc.localDescription.type, "sdp": sdpObj, "session": this.session};
-            console.log("sending:" + JSON.stringify(sdpcontext))
-
-            this.ws.send(JSON.stringify(sdpcontext));
-            if (window.showStatus) {
-                showStatus("Sent offer.");
-            }
-        } else {
-            console.log("ignoring local trickling candidates for now")
-            if (window.showStatus) {
-                showStatus("Gathering candidates.");
-            }
-        }
-    };
-    // let the "negotiationneeded" event trigger offer generation
-    pc.onnegotiationneeded = function () {
-        var sdpConstraints = {'mandatory': {'OfferToReceiveAudio': false, 'OfferToReceiveVideo': false}}
-        pc.createOffer(function (desc) {
-            pc.setLocalDescription(desc, function () {
-                console.log("Set Local description");
-            }, this.logError);
-        }, this.logError, sdpConstraints);
-    }
     this.peerCon = pc;
-    pc.ondatachannel = function (evt) {
-        if (this.ondatachannel) {
-            this.ondatachannel(evt);
-        }
-    };
+    pc.onicecandidate = this.onicecandidate;
+    pc.onnegotiationneeded = this.onnegotiationneeded;
+    pc.ondatachannel = this.ondatachannel;
     if (this.wssUrl == undefined) {
         this.wssUrl = this.makeWSUrl();
     }
     this.ws = this.makeWs();
-}
-;
+};
 
 IpseDataChannel.prototype.createDataChannel = function (name, props) {
     return this.peerCon.createDataChannel(name, props)
