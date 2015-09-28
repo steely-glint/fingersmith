@@ -147,7 +147,7 @@ IpseDataChannel.prototype.withPc = function (pc) {
     if (this.wssUrl == undefined) {
         this.wssUrl = makeWSUrl();
     }
-    this.ws = makeWs(finger);
+    this.ws = this.makeWs(finger);
 }
 ;
 
