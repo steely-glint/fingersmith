@@ -42,7 +42,7 @@
 
             var request = index.get(app);
             request.onsuccess = function(ev) {
-                var matching = this.result;
+                var matching = ev.target.result;
                 if (matching) {
                     console.log("Returning matched cert in DB");
                     doneCB(matching.cert);
