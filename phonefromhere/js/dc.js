@@ -14,9 +14,10 @@ var IpseDataChannel = function (finger, wssLoc) {
         var pc = new webkitRTCPeerConnection(configuration, null);
         this.withPc(pc);
     } else if (typeof mozRTCPeerConnection == "function") {
+        var that = this;
         Ipseorama.addMyCertToPeerConf(configuration, function () {
             var mozpc = new mozRTCPeerConnection(configuration, null)
-            this.withPc(mozpc);
+            that.withPc(mozpc);
         });
     }
 };
