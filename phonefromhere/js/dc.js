@@ -150,9 +150,15 @@ IpseDataChannel.prototype.onicecandidate = function (evt) {
 IpseDataChannel.prototype.withPc = function (pc) {
 // send everything to the peer - via fingersmith
     this.peerCon = pc;
-    pc.onicecandidate = this.onicecandidate;
-    pc.onnegotiationneeded = this.onnegotiationneeded;
-    pc.ondatachannel = this.ondatachannel;
+    pc.onicecandidate = function (evt) {
+        this.onicecandidate(evt);
+    };
+    pc.onnegotiationneeded = function () {
+        this.onnegotiationneeded();
+    };
+    pc.ondatachannel = function (evt) {
+        this.ondatachannel(evt);
+    };
     if (this.wssUrl == undefined) {
         this.wssUrl = this.makeWSUrl();
     }
