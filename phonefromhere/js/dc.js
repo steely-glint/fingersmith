@@ -131,7 +131,7 @@ function IpseDataChannel(finger,wssLoc) {
                 that.ondatachannel(evt);
             }
         };
-        if (!that.wssUrl){
+        if (that.wssUrl == undefined ){
             that.wssUrl = makeWSUrl();
         }
         that.ws = makeWs(finger);
