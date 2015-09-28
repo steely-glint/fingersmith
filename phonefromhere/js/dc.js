@@ -109,10 +109,11 @@ IpseDataChannel.prototype.logError = function (error) {
 
 IpseDataChannel.prototype.onnegotiationneeded = function () {
     var sdpConstraints = {'mandatory': {'OfferToReceiveAudio': false, 'OfferToReceiveVideo': false}}
+    var that = this;
     this.peerCon.createOffer(function (desc) {
-        this.peerCon.setLocalDescription(desc, function () {
+        that.peerCon.setLocalDescription(desc, function () {
             console.log("Set Local description");
-        }, this.logError);
+        }, that.logError);
     }, this.logError, sdpConstraints);
 }
 
