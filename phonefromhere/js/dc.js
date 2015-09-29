@@ -7,7 +7,17 @@ var IpseDataChannel = function (finger, wssLoc) {
     this.peerCon = undefined;
     var configuration = {
         "iceServers": [
-            {url: "stun:146.148.121.175:3478"}//,
+            {url: "stun:146.148.121.175:3478"},
+            {
+                url: 'turn:146.148.121.175:3478',
+                credential: 'pet',
+                username: 'snoopy'
+            },
+            {
+                url: 'turn:146.148.121.175:443',
+                credential: 'owner',
+                username: 'charliebrown'
+            }
         ]
     };
     if (typeof webkitRTCPeerConnection == "function") {
