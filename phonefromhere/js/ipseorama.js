@@ -88,7 +88,7 @@
         whoAmI: function (okCB, failCB) {
 
 
-            var peerconfig = {"iceServers": [{url: "stun:stun.l.google.com:19302"}]};
+            var peerconfig = {"iceServers": [{urls: "stun:stun.l.google.com:19302"}]};
             var offerCreated = function (localDesc) {
                 var myfp = Ipseorama.getFinger(localDesc.sdp)
                 okCB(myfp);
