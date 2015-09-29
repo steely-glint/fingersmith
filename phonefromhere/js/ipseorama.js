@@ -42,13 +42,17 @@
 
             var request = index.get(app);
             request.onsuccess = function(ev) {
-                console.log("lookup result " + JSON.stringify(ev));
-                var matching = ev.target.result;
-                if (matching) {
-                    console.log("Returning matched cert in DB");
-                    doneCB(matching.cert);
-                } else {
-                    console.log("No suitable cert in DB - creating one ");
+                try {
+                    console.log("lookup result " + JSON.stringify(this));
+                    if (this.result) {
+                        console.log("Returning matched cert in DB");
+                        doneCB(this.result.cert);
+                    } else {
+                        console.log("No suitable cert in DB - creating one ");
+                        Ipseorama.createCert(app, doneCB);
+                    }
+                } catch (e) {
+                    console.log("Exception looking for cert in DB "+e+" - creating one ");
                     Ipseorama.createCert(app, doneCB);
                 }
             };
