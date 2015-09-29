@@ -31,7 +31,6 @@
 
         findOrCreateCert: function (app, doneCB) {
             console.log("Looking for cert in Indexdb");
-
             Ipseorama.idb.certs.query('app', app)
                 .execute()
                 .then(function (results) {
@@ -51,7 +50,7 @@
 
             if (Ipseorama.idb == null) {
                 db.open({
-                    server: 'my-app',
+                    server: 'certs',
                     version: 1,
                     schema: {
                         certs: {
@@ -63,9 +62,11 @@
                     }
                 }).then(function (s) {
                     Ipseorama.idb = s;
+                    console.log("opened index db ");
                     Ipseorama.findOrCreateCert(app, doneCB);
                 });
             } else {
+                console.log("index db already open");
                 Ipseorama.findOrCreateCert(app, doneCB);
             }
         },
