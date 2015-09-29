@@ -49,13 +49,13 @@
             console.log("open Indexdb for cert ");
             if (Ipseorama.idb == null) {
                 db.open({
-                    server: 'certs',
+                    server: 'certsdb',
                     version: 1,
                     schema: {
                         certs: {
-                            key: {keyPath: 'app'},
+                            key: {keyPath: 'id',autoIncrement: true},
                             indexes: {
-                                app: {}
+                                app: { unique: true }
                             }
                         }
                     }
