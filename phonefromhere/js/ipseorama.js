@@ -42,6 +42,7 @@
 
             var request = index.get(app);
             request.onsuccess = function(ev) {
+                console.log("lookup result " + JSON.stringify(ev));
                 var matching = ev.target.result;
                 if (matching) {
                     console.log("Returning matched cert in DB");
@@ -54,14 +55,17 @@
         },
         findOrCreateCertAndDB: function(app, doneCB) {
             if (Ipseorama.db == null) {
-                var request = indexedDB.open("IpseCert",5);
-                request.onupgradeneeded = function() {
+                var request = indexedDB.open("IpseCert",4);
+                request.onupgradeneeded = function(event) {
                     var db = request.result;
                     console.log("Indexdb.open() needed upgrade...");
-
-                    // The database did not previously exist, so create object stores and indexes. var db = request.result;
-                    var store = db.createObjectStore("IpseCert", {keyPath: "app"});
-                    var appIndex = store.createIndex("by_app", "app");
+                    if (event.oldversion > 0) {
+                        // The database did not previously exist, so create object stores and indexes. var db = request.result;
+                        var store = db.createObjectStore("IpseCert", {keyPath: "app"});
+                        var appIndex = store.createIndex("by_app", "app");
+                    } else {
+                        console.log("version sepcific upgrade goes here");
+                    }
                 };
                 request.onsuccess = function() {
                     console.log("Indexdb.open() ok");
