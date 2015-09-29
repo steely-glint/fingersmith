@@ -63,7 +63,7 @@
                 request.onupgradeneeded = function(event) {
                     var db = request.result;
                     console.log("Indexdb.open() needed upgrade...");
-                    if (event.oldversion === 0) {
+                    if (event.oldVersion === 0) {
                         // The database did not previously exist, so create object stores and indexes. var db = request.result;
                         var store = db.createObjectStore("IpseCert", {keyPath: "app"});
                         var appIndex = store.createIndex("by_app", "app");
