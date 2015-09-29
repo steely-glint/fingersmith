@@ -7,7 +7,7 @@ var IpseDataChannel = function (finger, wssLoc) {
     this.peerCon = undefined;
     var configuration = {
         "iceServers": [
-            {url: "stun:stun.l.google.com:19302"}//,
+            {url: "stun:146.148.121.175:3478"}//,
         ]
     };
     if (typeof webkitRTCPeerConnection == "function") {
