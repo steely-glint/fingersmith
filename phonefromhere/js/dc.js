@@ -10,13 +10,13 @@ var IpseDataChannel = function (finger, wssLoc) {
             {urls: "stun:146.148.121.175:3478"},
             {
                 urls: 'turn:146.148.121.175:3478',
-                credential: 'pet',
-                username: 'snoopy'
+                username: 'pet',
+                credential: 'snoopy'
             },
             {
                 urls: 'turn:146.148.121.175:443',
-                credential: 'owner',
-                username: 'charliebrown'
+                username: 'owner',
+                credential: 'charliebrown'
             },
             {urls: "stun:stun.l.google.com:19302"},
 
