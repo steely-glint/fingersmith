@@ -34,10 +34,10 @@
             Ipseorama.idb.certs.query('app', app)
                 .execute()
                 .then(function (results) {
-                    console.log("lookup result " + JSON.stringify(this));
-                    if (this.result) {
+                    console.log("lookup result " + JSON.stringify(results));
+                    if (results) {
                         console.log("Returning matched cert in DB");
-                        doneCB(results.cert);
+                        doneCB(results[0]);
                     } else {
                         console.log("No suitable cert in DB - creating one ");
                         Ipseorama.createCert(app, doneCB);
@@ -47,7 +47,6 @@
 
         findOrCreateCertAndDB: function (app, doneCB) {
             console.log("open Indexdb for cert ");
-
             if (Ipseorama.idb == null) {
                 db.open({
                     server: 'certs',
