@@ -54,7 +54,7 @@
         },
         findOrCreateCertAndDB: function(app, doneCB) {
             if (Ipseorama.db == null) {
-                var request = indexedDB.open("IpseCert",4);
+                var request = indexedDB.open("IpseCert",5);
                 request.onupgradeneeded = function() {
                     var db = request.result;
                     console.log("Indexdb.open() needed upgrade...");
