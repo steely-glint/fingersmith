@@ -36,7 +36,7 @@
                     console.log("lookup result " + JSON.stringify(results));
                     if (results && (results.length > 0) ) {
                         console.log("Returning matched cert in DB");
-                        doneCB(results[0]);
+                        doneCB(results[0].cert);
                     } else {
                         console.log("No suitable cert in DB - creating one ");
                         Ipseorama.createCert(app, doneCB);
