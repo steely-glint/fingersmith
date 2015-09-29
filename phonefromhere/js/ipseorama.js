@@ -31,9 +31,8 @@
 
         findOrCreateCert: function (app, doneCB) {
             console.log("Looking for cert in Indexdb");
-            Ipseorama.idb.certs.query('app', app)
-                .execute()
-                .then(function (results) {
+            var q = Ipseorama.idb.certs.query('app', app);
+                q.execute().then(function (results) {
                     console.log("lookup result " + JSON.stringify(results));
                     if (results) {
                         console.log("Returning matched cert in DB");
