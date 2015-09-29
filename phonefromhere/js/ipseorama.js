@@ -34,7 +34,7 @@
             var q = Ipseorama.idb.certs.query('app', app);
                 q.all().execute().then(function (results) {
                     console.log("lookup result " + JSON.stringify(results));
-                    if (results) {
+                    if (results && (results.length() > 0) ) {
                         console.log("Returning matched cert in DB");
                         doneCB(results[0]);
                     } else {
