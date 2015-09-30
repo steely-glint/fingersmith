@@ -25,8 +25,8 @@
     _parseLine = function(line) {
         var s1 = line.split("=");
         return {
-            type: s1[0],
-            contents: s1[1]
+            type: s1.shift(),
+            contents: s1.join("=")
         }
     }
 
