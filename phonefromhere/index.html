@@ -29,9 +29,7 @@
         var you = $('#youVid');
         ipsed.setVideoElms(me,you);
     }
-    Ipseorama.whoAmI(gotFinger, function (err) {
-        console.log("could not create identity " + err)
-    });
+    
     function onDcMessage(evt) {
         console.log(" got dc message: " + evt.data);
         $('#responseText').val(evt.data)
@@ -76,6 +74,12 @@
         chout.send(mess);
     }
 
+    $( document ).ready( function() {
+        Ipseorama.whoAmI(gotFinger, function (err) {
+            console.log("could not create identity " + err)
+        });
+    });
+
 </script>
 <h1>Fingersmith test page</h1>
 
@@ -95,8 +99,9 @@
     <textarea id="responseText" style="width: 500px; height:300px;"></textarea>
 
 </form>
+<div class="videos" id="videowindows">
 <video id="meVid"  width="640" height="480"></video>
 <video id="youVid"  width="640" height="480"></video>
-
+</div>
 </body>
 </html>

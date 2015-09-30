@@ -175,7 +175,9 @@ IpseDataChannel.prototype.ondatachannel = function (evt) {
 
 IpseDataChannel.prototype.onaddstream = function (evt) {
     var that = this;
-    this.youVid.src = URL.createObjectURL(evt.stream);
+    var url = window.URL || window.webkitURL;
+
+    this.youVid.src = url.createObjectURL(evt.stream);
     this.youVid.onloadedmetadata = function(e) {
         that.youVid.play();
     };
@@ -258,7 +260,9 @@ IpseDataChannel.prototype.createVideo = function (act) {
     };
     var that = this;
     var addstream = function (stream) {
-        that.meVid.src = URL.createObjectURL(stream);
+        var url = window.URL || window.webkitURL;
+
+        that.meVid.src = url.createObjectURL(stream);
         that.meVid.onloadedmetadata = function(e) {
             that.meVid.play();
         };
