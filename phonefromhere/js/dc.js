@@ -239,10 +239,19 @@ IpseDataChannel.prototype.createCall= function() {
         audio: false // silence is golden in demos.
     };
     var that = this;
-    navigator.getUserMedia(constraints, function (stream) {
+    var addstream = function (stream) {
         that.meVid.src = URL.createObjectURL(stream);
         that.peerCon.addStream(stream);
-    }, this.logError);
+    }
+    if (typeof navigator.mediaDevices.getUserMedia == 'function') {
+        navigator.mediaDevices.getUserMedia(constraints, addstream, this.logError);
+    } else if (typeof navigator.mozGetUserMedia == 'function'){
+        navigator.mozGetUserMedia(constraints, addstream, this.logError);
+    } else if (typeof navigator.webkitGetUserMedia == 'function'){
+        navigator.webkitGetUserMedia(constraints, addstream, this.logError);
+    } else {
+        console.log("No Gum ?");
+    }
 }
 
 IpseDataChannel.prototype.setTo = function (tof) {
