@@ -25,8 +25,8 @@
         $('#myFinger').html(finger);
         ipsed = new IpseDataChannel(finger, fingersmithWSURL);
         ipsed.setOnDataChannel(onNewDc);
-        var me = $('#meVid');
-        var you = $('#youVid');
+        var me = document.getElementById('meVid');
+        var you = document.getElementById('youVid');
         ipsed.setVideoElms(me,you);
     }
 
