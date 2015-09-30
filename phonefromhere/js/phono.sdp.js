@@ -580,7 +580,7 @@
                             if (sctp)
                                 sdpObj.sctpmap.push(sctp)
                             break;
-                        case "ftpm":
+                        case "fmtp":
                             var fmtp = _parsefmtp(a.params);
                             _addfmtpToCodec(sdpObj.codecs,fmtp);
                             break;

@@ -116,19 +116,11 @@ IpseDataChannel.prototype.makeWs = function () {
                     theirfp = theirfp.split('"').join("");
                     console.log("their fingerprint is " + theirfp)
                     that.setTo(theirfp);
-                    pc.createAnswer(function (desc) {
-                        pc.setLocalDescription(desc, function () {
-                            console.log("Set Local description " + JSON.stringify(desc));
-                            if (window.showStatus) {
-                                showStatus("Got Answer");
-                            }
-                            that.sendLocal();
-                        }, function (e) {
-                            console.log("Set Local description error " + e);
-                        });
-                    }, function (e) {
-                        console.log("Create answer error " + e);
-                    });
+                    if (that.hasMedia(data,'video')){
+                        that.createVideo(that.createAnswer);
+                    } else {
+                        that.createAnswer();
+                    }
                 }
             }, function (e) {
                 console.log("Set Remote description error " + e);
@@ -144,6 +136,24 @@ IpseDataChannel.prototype.logError = function (error) {
 
 IpseDataChannel.prototype.onnegotiationneeded = function () {
     console.log("In onnegotiationneeded ");
+}
+
+IpseDataChannel.prototype.createAnswer = function () {
+    var pc = this.peerCon;
+    var that = this;
+    pc.createAnswer(function (desc) {
+        pc.setLocalDescription(desc, function () {
+            console.log("Set Local description " + JSON.stringify(desc));
+            if (window.showStatus) {
+                showStatus("Got Answer");
+            }
+            that.sendLocal();
+        }, function (e) {
+            console.log("Set Local description error " + e);
+        });
+    }, function (e) {
+        console.log("Create answer error " + e);
+    });
 }
 
 IpseDataChannel.prototype.createOffer = function () {
@@ -234,6 +244,10 @@ IpseDataChannel.prototype.createDataChannel = function (name, props) {
 }
 
 IpseDataChannel.prototype.createCall = function () {
+    this.createVideo(this.createOffer);
+}
+
+IpseDataChannel.prototype.createVideo = function (act) {
     var constraints = {
         video: true,
         audio: false // silence is golden in demos.
@@ -242,7 +256,7 @@ IpseDataChannel.prototype.createCall = function () {
     var addstream = function (stream) {
         that.meVid.src = URL.createObjectURL(stream);
         that.peerCon.addStream(stream);
-        that.createOffer();
+        act();
     }
     if ((navigator.mediaDevices) && (typeof navigator.mediaDevices.getUserMedia == 'function')) {
         var p = navigator.mediaDevices.getUserMedia(constraints);
@@ -269,4 +283,75 @@ IpseDataChannel.prototype.setOnDataChannel = function (callback) {
         callback(evt.channel);
     };
 }
+IpseDataChannel.prototype.hasMedia = function(sdpO, mtype){
+    var ret = false;
+    if (sdp0.sdp){
+        sdp = sdp0.sdp;
+        for (var n in sdp.contents){
+            var cont = sdp.contents[n];
+            if (cont.media){
+                if (cont.media.type == mtype){
+                    ret = true;
+                    break;
+                }
+            }
+        }
+    }
+    return ret;
+}
+
+_thing = {
+    "to": "556329103E22DE09CA2DA0098873185845C114D755C3EFDAE2852FE31F158DBA",
+    "type": "offer",
+    "sdp": {
+        "contents": [{
+            "candidates": [],
+            "codecs": [{"id": "100", "name": "VP8", "clockrate": "90000"}, {
+                "id": "116",
+                "name": "red",
+                "clockrate": "90000"
+            }, {"id": "117", "name": "ulpfec", "clockrate": "90000"}, {
+                "id": "96",
+                "name": "rtx",
+                "clockrate": "90000"
+            }],
+            "sctpmap": [],
+            "extmap": [{"num": "2", "name": "urn:ietf:params:rtp-hdrext:toffset"}, {
+                "num": "3",
+                "name": "http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time"
+            }, {"num": "4", "name": "urn:3gpp:video-orientation"}],
+            "ice": {"ufrag": "R2SpRXt/SczfR608", "pwd": "Ptt+xP6BkeyDdgB8WJ7A/N5L"},
+            "media": {"type": "video", "port": "9", "proto": "RTP/SAVPF", "pts": ["100", "116", "117", "96"]},
+            "connection": {"nettype": "IN", "addrtype": "IP4", "address": "0.0.0.0"},
+            "rtcp": {"port": "9", "nettype": "IN", "addrtype": "IP4", "address": "0.0.0.0"},
+            "fingerprint": {
+                "hash": "sha-256",
+                "print": "AD:50:5C:02:53:B5:40:2B:1E:41:BF:1B:EF:CA:46:00:ED:55:C2:E1:41:AE:54:14:EC:F3:B6:BD:2D:E0:E3:C1",
+                "required": "1"
+            },
+            "setup": "actpass",
+            "mid": "video",
+            "direction": "sendrecv",
+            "rtcp-mux": true,
+            "ssrc": {
+                "ssrc": "2688921042",
+                "cname": "Rbe8dfX7TzCowmxe",
+                "msid": "cEcVgHMsJFfIXen4bmxNdvREogjqfqeRT0oU",
+                "mslabel": "cEcVgHMsJFfIXen4bmxNdvREogjqfqeRT0oU",
+                "label": "3217d60c-862e-451a-9017-8b50d3f9d5e6"
+            }
+        }],
+        "session": {
+            "username": "-",
+            "id": "2592799876580971709",
+            "ver": "2",
+            "nettype": "IN",
+            "addrtype": "IP4",
+            "address": "127.0.0.1"
+        },
+        "group": {"type": "BUNDLE", "contents": ["video"]}
+    },
+    "session": "AD505C0253B5402B1E41BF1BEFCA4600ED55C2E141AE5414ECF3B6BD2DE0E3C1-556329103E22DE09CA2DA0098873185845C114D755C3EFDAE2852FE31F158DBA-1443621840114",
+    "from": "AD505C0253B5402B1E41BF1BEFCA4600ED55C2E141AE5414ECF3B6BD2DE0E3C1"
+};
 
