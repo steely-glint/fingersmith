@@ -181,7 +181,7 @@
     _parseExtmap = function(params){
         var ext = {
             num: params[0],
-            name: params[1],
+            name: params[1]
         }
         return ext;
     }
@@ -198,7 +198,7 @@
     }
     _parseRtcpFb = function(params){
         var rtcpfb = {
-            codecId: params.shift(),
+            id: params.shift(),
             args: params
         }
         return rtcpfb;

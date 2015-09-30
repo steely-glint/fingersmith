@@ -99,7 +99,7 @@ IpseDataChannel.prototype.makeWs = function () {
         }
         if ((data.type == 'offer') || (data.type == 'answer')) {
             var sdp = Phono.sdp.buildSDP(data.sdp);
-            console.log("answer sdp is " + sdp);
+            console.log("Sdp "+data.type+" is " + sdp);
             var message = {'sdp': sdp, 'type': data.type};
             var rtcd;
             if (typeof mozRTCSessionDescription == "function") {
