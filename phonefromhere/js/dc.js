@@ -5,6 +5,9 @@ var IpseDataChannel = function (finger, wssLoc) {
     this.session = "new";
     this.toFinger = undefined;
     this.peerCon = undefined;
+    this.meVid = undefined;
+    this.youVid = undefined;
+
     var configuration = {
         "iceServers": [
             {urls: "stun:146.148.121.175:3478"},
@@ -33,6 +36,13 @@ var IpseDataChannel = function (finger, wssLoc) {
         });
     }
 };
+
+
+IpseDataChannel.prototype.setVideoElms= function(me,you){
+    this.meVid =me;
+    this.youVid = you;
+}
+
 IpseDataChannel.prototype.makeWSUrl = function () {
     var protocol, host, port;
     protocol = "ws:"
@@ -70,11 +80,10 @@ IpseDataChannel.prototype.makeWs = function () {
         this.ws = null;
     };
     socket.onmessage = function (event) {
-        console.log("message is " + event.data);
+        console.log("recv -> " + event.data);
         var pc = that.peerCon;
 
         var data = JSON.parse(event.data);
-        console.log("data is " + JSON.stringify(data));
         if (data.type == 'candidate'){
             var jc = {
                 sdpMLineIndex: data.candidate.sdpMLineIndex,
@@ -154,6 +163,9 @@ IpseDataChannel.prototype.ondatachannel = function (evt) {
     }
 };
 
+IpseDataChannel.prototype.onaddstream = function (evt) {
+    this.youVid.src = URL.createObjectURL(evt.stream);
+};
 
 IpseDataChannel.prototype.sendLocal = function () {
     var sdpObj = Phono.sdp.parseSDP(this.peerCon.localDescription.sdp);
@@ -167,7 +179,7 @@ IpseDataChannel.prototype.sendLocal = function () {
         "from":this.finger
 
     };
-    console.log("sending:" + JSON.stringify(sdpcontext))
+    console.log("send <- " + JSON.stringify(sdpcontext))
 
     this.ws.send(JSON.stringify(sdpcontext));
     if (window.showStatus) {
@@ -184,7 +196,7 @@ IpseDataChannel.prototype.onicecandidate = function (evt) {
             "session": this.session,
             "from":this.finger
         };
-        console.log("sending:" + JSON.stringify(candy))
+        console.log("send <- " + JSON.stringify(candy))
 
         this.ws.send(JSON.stringify(candy));
         if (window.showStatus) {
@@ -206,6 +218,9 @@ IpseDataChannel.prototype.withPc = function (pc) {
     pc.ondatachannel = function (evt) {
         that.ondatachannel(evt);
     };
+    pc.onaddstream = function (evt) {
+        that.onaddstream(evt);
+    };
     if (this.wssUrl == undefined) {
         this.wssUrl = this.makeWSUrl();
     }
@@ -217,6 +232,19 @@ IpseDataChannel.prototype.createDataChannel = function (name, props) {
     this.createOffer();
     return dc;
 }
+
+IpseDataChannel.prototype.createCall= function() {
+    var constraints = {
+        video: true,
+        audio: false // silence is golden in demos.
+    };
+    var that = this;
+    navigator.getUserMedia(constraints, function (stream) {
+        that.meVid.src = URL.createObjectURL(stream);
+        that.peerCon.addStream(stream);
+    }, errorHandler);
+}
+
 IpseDataChannel.prototype.setTo = function (tof) {
     this.toFinger = tof;
     var d = new Date();

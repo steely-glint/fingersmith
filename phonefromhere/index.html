@@ -25,6 +25,9 @@
         $('#myFinger').html(finger);
         ipsed = new IpseDataChannel(finger, fingersmithWSURL);
         ipsed.setOnDataChannel(onNewDc);
+        var me = $('#meVid');
+        var you = $('#youVid');
+        ipsed.setVideoElms(me,you);
     }
     Ipseorama.whoAmI(gotFinger, function (err) {
         console.log("could not create identity " + err)
@@ -37,12 +40,22 @@
         console.log("New DC ")
         channel.onmessage = onDcMessage;
     }
+    function makecall(){
+        var tofinger = $('#tofinger').val();
+        console.log("setting toFinger" + tofinger);
+        ipsed.setTo(tofinger);
+        ipsed.createCall()
+    }
     function makedc() {
         var tofinger = $('#tofinger').val();
         console.log("setting toFinger" + tofinger);
 
         ipsed.setTo(tofinger);
-        var channel = ipsed.createDataChannel("test", {});
+        var dataChannelOptions = {
+            ordered: true, // do guarantee order
+            maxRetransmitTime: 3000, // in milliseconds
+        };
+        var channel = ipsed.createDataChannel("test", dataChannelOptions);
         channel.onopen = function () {
             // e.g. enable send button
             //enableChat(channel);
@@ -70,15 +83,20 @@
     <span id="myFinger">unknown</span></div>
 <form onsubmit="return false;">
     <input type="text" name="to" id="tofinger" value=""/>
-    <input type="button" value="connect" onclick="makedc();"/>
+    <input type="button" value="make DataChannel" onclick="makedc();"/>
+    <input type="button" value="make Call" onclick="makecall();"/>
+
 </form>
 <form onsubmit="return false;">
     <input type="text" name="message" value="Hello, World!"/>
-    <input type="button" value="send" onclick="chsend()"/>
+    <input type="button" value="send text" onclick="chsend()"/>
 
     <h3>Output</h3>
     <textarea id="responseText" style="width: 500px; height:300px;"></textarea>
 
 </form>
+<video id="meVid" autoplay width="640",height="480"></video>
+<video id="youVid" autoplay width="640",height="480"></video>
+
 </body>
 </html>
