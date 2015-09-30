@@ -71,12 +71,19 @@ IpseDataChannel.prototype.makeWs = function () {
     };
     socket.onmessage = function (event) {
         console.log("message is " + event.data);
+        var pc = that.peerCon;
 
         var data = JSON.parse(event.data);
         console.log("data is " + JSON.stringify(data));
-
-        if (data.session) {
-            var pc = that.peerCon;
+        if (data.type == 'candidate'){
+            var candidate     = data.candidate.candidate;
+            var sdpMLineIndex = data.candidate.sdpMLineIndex;
+            pc.addIceCandidate(new RTCIceCandidate({
+                sdpMLineIndex: sdpMLineIndex,
+                candidate    : candidate
+            }));
+        }
+        if ((data.type == 'offer') || (data.type == 'answer')) {
             var sdp = Phono.sdp.buildSDP(data.sdp);
             console.log("answer sdp is " + sdp);
             var message = {'sdp': sdp, 'type': data.type};
@@ -100,6 +107,7 @@ IpseDataChannel.prototype.makeWs = function () {
                             console.log("Set Local description " + JSON.stringify(desc));
                             if (window.showStatus) {
                                 showStatus("Got Answer");
+                                // send answer here
                             }
                         }, function (e) {
                             console.log("Set Local description error " + e);
@@ -128,6 +136,7 @@ IpseDataChannel.prototype.onnegotiationneeded = function () {
     this.peerCon.createOffer(function (desc) {
         that.peerCon.setLocalDescription(desc, function () {
             console.log("Set Local description");
+            that.sendLocal();
         }, that.logError);
     }, this.logError, sdpConstraints);
 }
@@ -138,25 +147,39 @@ IpseDataChannel.prototype.ondatachannel = function (evt) {
     }
 };
 
+
+IpseDataChannel.prototype.sendLocal = function () {
+    var sdpObj = Phono.sdp.parseSDP(this.peerCon.localDescription.sdp);
+    console.log("this.toFinger:" + this.toFinger);
+
+    var sdpcontext = {
+        "to": this.toFinger,
+        "type": this.peerCon.localDescription.type,
+        "sdp": sdpObj,
+        "session": this.session,
+        "from":this.finger
+
+    };
+    console.log("sending:" + JSON.stringify(sdpcontext))
+
+    this.ws.send(JSON.stringify(sdpcontext));
+    if (window.showStatus) {
+        showStatus("Sent sdp.");
+    }
+}
+
 IpseDataChannel.prototype.onicecandidate = function (evt) {
-    if (evt.candidate === null) {
-        var sdpObj = Phono.sdp.parseSDP(this.peerCon.localDescription.sdp);
-        console.log("this.toFinger:" + this.toFinger);
-
-        var sdpcontext = {
+    if (evt.candidate != null) {
+        var candy = {
             "to": this.toFinger,
-            "type": this.peerCon.localDescription.type,
-            "sdp": sdpObj,
-            "session": this.session
+            "type": 'candidate',
+            "candidate": evt.candidate,
+            "session": this.session,
+            "from":this.finger
         };
-        console.log("sending:" + JSON.stringify(sdpcontext))
+        console.log("sending:" + JSON.stringify(candy))
 
-        this.ws.send(JSON.stringify(sdpcontext));
-        if (window.showStatus) {
-            showStatus("Sent offer.");
-        }
-    } else {
-        console.log("ignoring local trickling candidates for now")
+        this.ws.send(JSON.stringify(candy));
         if (window.showStatus) {
             showStatus("Gathering candidates.");
         }
