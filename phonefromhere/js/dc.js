@@ -76,12 +76,17 @@ IpseDataChannel.prototype.makeWs = function () {
         var data = JSON.parse(event.data);
         console.log("data is " + JSON.stringify(data));
         if (data.type == 'candidate'){
-            var candidate     = data.candidate.candidate;
-            var sdpMLineIndex = data.candidate.sdpMLineIndex;
-            pc.addIceCandidate(new RTCIceCandidate({
-                sdpMLineIndex: sdpMLineIndex,
-                candidate    : candidate
-            }));
+            var jc = {
+                sdpMLineIndex: data.candidate.sdpMLineIndex,
+                    candidate    : data.candidate.candidate
+            };
+            var nc ="Huh? ";
+            if (typeof mozRTCIceCandidate == "function") {
+                nc = new mozRTCIceCandidate(jc);
+            } else {
+                nc = new RTCIceCandidate(jc);
+            }
+            pc.addIceCandidate(nc);
         }
         if ((data.type == 'offer') || (data.type == 'answer')) {
             var sdp = Phono.sdp.buildSDP(data.sdp);
