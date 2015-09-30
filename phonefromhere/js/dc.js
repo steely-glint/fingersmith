@@ -292,8 +292,8 @@ IpseDataChannel.prototype.setOnDataChannel = function (callback) {
 }
 IpseDataChannel.prototype.hasMedia = function(sdpO, mtype){
     var ret = false;
-    if (sdp0.sdp){
-        sdp = sdp0.sdp;
+    if (sdpO.sdp){
+        sdp = sdpO.sdp;
         for (var n in sdp.contents){
             var cont = sdp.contents[n];
             if (cont.media){
