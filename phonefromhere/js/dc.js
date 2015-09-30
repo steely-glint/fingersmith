@@ -134,7 +134,11 @@ IpseDataChannel.prototype.logError = function (error) {
 };
 
 IpseDataChannel.prototype.onnegotiationneeded = function () {
-    var sdpConstraints = {'mandatory': {'OfferToReceiveAudio': false, 'OfferToReceiveVideo': false}}
+    console.log("In onnegotiationneeded ");
+}
+
+IpseDataChannel.prototype.createOffer = function () {
+    var sdpConstraints = {};
     var that = this;
     this.peerCon.createOffer(function (desc) {
         that.peerCon.setLocalDescription(desc, function () {
@@ -209,7 +213,9 @@ IpseDataChannel.prototype.withPc = function (pc) {
 };
 
 IpseDataChannel.prototype.createDataChannel = function (name, props) {
-    return this.peerCon.createDataChannel(name, props)
+    var dc =  this.peerCon.createDataChannel(name, props);
+    this.createOffer();
+    return dc;
 }
 IpseDataChannel.prototype.setTo = function (tof) {
     this.toFinger = tof;
