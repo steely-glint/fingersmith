@@ -216,7 +216,7 @@
     }
     _parsefmtp = function(params){
         var fmtp = {
-            codecId: params.shift(),
+            id: params.shift(),
             args: params
         }
         return fmtp;
