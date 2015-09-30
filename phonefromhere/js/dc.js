@@ -253,7 +253,7 @@ IpseDataChannel.prototype.createCall = function () {
 
 IpseDataChannel.prototype.createVideo = function (act) {
     var constraints = {
-        video: { width: 640, height: 480 },
+        video: true,
         audio: false // silence is golden in demos.
     };
     var that = this;
