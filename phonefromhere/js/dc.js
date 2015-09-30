@@ -242,7 +242,7 @@ IpseDataChannel.prototype.createCall= function() {
     navigator.getUserMedia(constraints, function (stream) {
         that.meVid.src = URL.createObjectURL(stream);
         that.peerCon.addStream(stream);
-    }, errorHandler);
+    }, this.logError);
 }
 
 IpseDataChannel.prototype.setTo = function (tof) {
