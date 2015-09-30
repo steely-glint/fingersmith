@@ -38,8 +38,8 @@ var IpseDataChannel = function (finger, wssLoc) {
 };
 
 
-IpseDataChannel.prototype.setVideoElms= function(me,you){
-    this.meVid =me;
+IpseDataChannel.prototype.setVideoElms = function (me, you) {
+    this.meVid = me;
     this.youVid = you;
 }
 
@@ -84,12 +84,12 @@ IpseDataChannel.prototype.makeWs = function () {
         var pc = that.peerCon;
 
         var data = JSON.parse(event.data);
-        if (data.type == 'candidate'){
+        if (data.type == 'candidate') {
             var jc = {
                 sdpMLineIndex: data.candidate.sdpMLineIndex,
-                    candidate    : data.candidate.candidate
+                candidate: data.candidate.candidate
             };
-            var nc ="Huh? ";
+            var nc = "Huh? ";
             if (typeof mozRTCIceCandidate == "function") {
                 nc = new mozRTCIceCandidate(jc);
             } else {
@@ -176,7 +176,7 @@ IpseDataChannel.prototype.sendLocal = function () {
         "type": this.peerCon.localDescription.type,
         "sdp": sdpObj,
         "session": this.session,
-        "from":this.finger
+        "from": this.finger
 
     };
     console.log("send <- " + JSON.stringify(sdpcontext))
@@ -194,7 +194,7 @@ IpseDataChannel.prototype.onicecandidate = function (evt) {
             "type": 'candidate',
             "candidate": evt.candidate,
             "session": this.session,
-            "from":this.finger
+            "from": this.finger
         };
         console.log("send <- " + JSON.stringify(candy))
 
@@ -228,12 +228,12 @@ IpseDataChannel.prototype.withPc = function (pc) {
 };
 
 IpseDataChannel.prototype.createDataChannel = function (name, props) {
-    var dc =  this.peerCon.createDataChannel(name, props);
+    var dc = this.peerCon.createDataChannel(name, props);
     this.createOffer();
     return dc;
 }
 
-IpseDataChannel.prototype.createCall= function() {
+IpseDataChannel.prototype.createCall = function () {
     var constraints = {
         video: true,
         audio: false // silence is golden in demos.
@@ -242,18 +242,15 @@ IpseDataChannel.prototype.createCall= function() {
     var addstream = function (stream) {
         that.meVid.src = URL.createObjectURL(stream);
         that.peerCon.addStream(stream);
+        that.createOffer();
     }
-    if ((navigator.mediaDevices) && (typeof navigator.mediaDevices.getUserMedia == 'function')){
+    if ((navigator.mediaDevices) && (typeof navigator.mediaDevices.getUserMedia == 'function')) {
         var p = navigator.mediaDevices.getUserMedia(constraints);
-        p.then(function(stream) {
-            that.meVid.src = URL.createObjectURL(stream);
-            that.peerCon.addStream(stream);
-            }
-        );
-        p.catch(function(e) { that.logError(e) });
-    } else if (typeof navigator.mozGetUserMedia == 'function'){
+        p.then(addstream);
+        p.catch(that.logError);
+    } else if (typeof navigator.mozGetUserMedia == 'function') {
         navigator.mozGetUserMedia(constraints, addstream, this.logError);
-    } else if (typeof navigator.webkitGetUserMedia == 'function'){
+    } else if (typeof navigator.webkitGetUserMedia == 'function') {
         navigator.webkitGetUserMedia(constraints, addstream, this.logError);
     } else {
         console.log("No Gum ?");
