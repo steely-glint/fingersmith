@@ -317,6 +317,7 @@
             sdp += "\r\n";
         }
         if (codecObj.rtcpfbs){
+            var rtcpfbs = codecObj.rtcpfbs;
             for (n in rtcpfbs){
                 var rtcpfb = rtcpfbs[n];
                 sdp += "a=rtcp-fb:" + rtcpfb.id +" "+ rtcpfb.args.join(" ");
@@ -324,6 +325,7 @@
             }
         }
         if (codecObj.fmtps){
+            var fmtps = codecObj.fmtps;
             for (n in fmtps){
                 var fmtp = fmtps[n];
                 sdp += "a=fmtp:" + fmtp.id +" "+ fmtp.args.join(" ");
