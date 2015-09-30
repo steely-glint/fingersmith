@@ -99,7 +99,7 @@ IpseDataChannel.prototype.makeWs = function () {
         }
         if ((data.type == 'offer') || (data.type == 'answer')) {
             var sdp = Phono.sdp.buildSDP(data.sdp);
-            console.log("Sdp "+data.type+" is " + sdp);
+            console.log("Sdp " + data.type + " is " + sdp);
             var message = {'sdp': sdp, 'type': data.type};
             var rtcd;
             if (typeof mozRTCSessionDescription == "function") {
@@ -116,7 +116,7 @@ IpseDataChannel.prototype.makeWs = function () {
                     theirfp = theirfp.split('"').join("");
                     console.log("their fingerprint is " + theirfp)
                     that.setTo(theirfp);
-                    if (that.hasMedia(data,'video')){
+                    if (that.hasMedia(data, 'video')) {
                         that.createVideo('answer');
                     } else {
                         that.createAnswer();
@@ -175,12 +175,18 @@ IpseDataChannel.prototype.ondatachannel = function (evt) {
 
 IpseDataChannel.prototype.onaddstream = function (evt) {
     var that = this;
-    var url = window.URL || window.webkitURL;
+    var element = this.youVid;
+    var stream = evt.stream;
+    if (typeof element.srcObject !== 'undefined') {
+        element.srcObject = stream;
+    } else if (typeof element.mozSrcObject !== 'undefined') {
+        element.mozSrcObject = stream;
+    } else if (typeof element.src !== 'undefined') {
+        element.src = URL.createObjectURL(stream);
+    } else {
+        console.log('Error attaching stream to element.');
+    }
 
-    this.youVid.src = url.createObjectURL(evt.stream);
-    this.youVid.onloadedmetadata = function(e) {
-        that.youVid.play();
-    };
 };
 
 IpseDataChannel.prototype.sendLocal = function () {
@@ -263,16 +269,16 @@ IpseDataChannel.prototype.createVideo = function (act) {
         var url = window.URL || window.webkitURL;
 
         that.meVid.src = url.createObjectURL(stream);
-        that.meVid.onloadedmetadata = function(e) {
+        that.meVid.onloadedmetadata = function (e) {
             that.meVid.play();
         };
         that.peerCon.addStream(stream);
-        if (act == 'answer'){
+        if (act == 'answer') {
             that.createAnswer();
-        } else if (act == 'offer'){
+        } else if (act == 'offer') {
             that.createOffer();
         } else {
-            console.log("unknown act ? "+act);
+            console.log("unknown act ? " + act);
         }
 
     }
@@ -301,14 +307,14 @@ IpseDataChannel.prototype.setOnDataChannel = function (callback) {
         callback(evt.channel);
     };
 }
-IpseDataChannel.prototype.hasMedia = function(sdpO, mtype){
+IpseDataChannel.prototype.hasMedia = function (sdpO, mtype) {
     var ret = false;
-    if (sdpO.sdp){
+    if (sdpO.sdp) {
         sdp = sdpO.sdp;
-        for (var n in sdp.contents){
+        for (var n in sdp.contents) {
             var cont = sdp.contents[n];
-            if (cont.media){
-                if (cont.media.type == mtype){
+            if (cont.media) {
+                if (cont.media.type == mtype) {
                     ret = true;
                     break;
                 }
