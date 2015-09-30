@@ -178,6 +178,49 @@
         }
         return dc;
     }
+    _parseExtmap = function(params){
+        var ext = {
+            num: params[0],
+            name: params[1],
+        }
+        return ext;
+    }
+    _addFbToCodec = function(codecs,rtcpfb){
+        for (n in codecs) {
+            var codec = codecs[n];
+            if (codec.id == rtcpfb.id){
+                if (!codec.rtcpfbs){
+                    codec.rtcpfbs = [];
+                }
+                codec.rtcpfbs.push(rtcpfb)
+            }
+        }
+    }
+    _parseRtcpFb = function(params){
+        var rtcpfb = {
+            codecId: params.shift(),
+            args: params
+        }
+        return rtcpfb;
+    }
+    _addfmtpToCodec = function(codecs,fmtp){
+        for (n in codecs) {
+            var codec = codecs[n];
+            if (codec.id == fmtp.id){
+                if (!codec.fmtps){
+                    codec.fmtps = [];
+                }
+                codec.fmtps.push(fmtp)
+            }
+        }
+    }
+    _parsefmtp = function(params){
+        var fmtp = {
+            codecId: params.shift(),
+            args: params
+        }
+        return fmtp;
+    }
 
     _parseSsrc = function(params, ssrc) {
         var ssrcObj = {};
@@ -259,6 +302,10 @@
         return "a=sctpmap:"+sctpObj.port + " " + sctpObj.app + " " + sctpObj.count + "\r\n";
     }
 
+    _buildExtmap = function(extObj){
+        return "a=extmap:"+extObj.num + " " + extObj.name + "\r\n";
+    }
+
     _buildCodec = function(codecObj) {
         var sdp = "a=rtpmap:" + codecObj.id + " " + codecObj.name + "/" + codecObj.clockrate
         if (codecObj.channels) {
@@ -268,6 +315,20 @@
         if (codecObj.ptime) {
             sdp += "a=ptime:" + codecObj.ptime;
             sdp += "\r\n";
+        }
+        if (codecObj.rtcpfbs){
+            for (n in rtcpfbs){
+                var rtcpfb = rtcpfbs[n];
+                sdp += "a=rtcp-fb:" + rtcpfb.id +" "+ rtcpfb.args.join(" ");
+                sdp += "\r\n";
+            }
+        }
+        if (codecObj.fmtps){
+            for (n in fmtps){
+                var fmtp = fmtps[n];
+                sdp += "a=fmtp:" + fmtp.id +" "+ fmtp.args.join(" ");
+                sdp += "\r\n";
+            }
         }
         return sdp;
     }
@@ -370,6 +431,12 @@
         }
 
 
+        var edi = 0;
+        while (edi + 1 <= sdpObj.extmap.length) {
+            sdp = sdp + _buildExtmap(sdpObj.extmap[edi]);
+            edi = edi + 1;
+        }
+
         if (sdpObj.ssrc) {
             var ssrc = sdpObj.ssrc;
             if (ssrc.cname)
@@ -424,6 +491,7 @@
                     sdpObj.candidates = [];
                     sdpObj.codecs = [];
                     sdpObj.sctpmap = [];
+                    sdpObj.extmap = [];
                     sdpObj.ice = sessionSDP.ice;
                     if (sessionSDP.fingerprint != null) {
                         sdpObj.fingerprint = sessionSDP.fingerprint;
@@ -469,6 +537,10 @@
                             if (codec)
                                 sdpObj.codecs.push(codec);
                             break;
+                        case "rtcp-fb":
+                            var rtcpfb = _parseRtcpFb(a.params);
+                            _addFbToCodec(sdpObj.codecs,rtcpfb);
+                            break;
                         case "sendrecv":
                             sdpObj.direction = "sendrecv";
                             break;
@@ -498,11 +570,21 @@
                         case "ice-options":
                             sdpObj.ice.options = a.params[0];
                             break;
+                        case "extmap":
+                            var extmap = _parseExtmap(a.params);
+                            if (extmap)
+                                sdpObj.extmap.push(extmap)
+                            break;
                         case "sctpmap":
                             var sctp = _parseSctpmap(a.params);
                             if (sctp)
                                 sdpObj.sctpmap.push(sctp)
                             break;
+                        case "ftpm":
+                            var fmtp = _parsefmtp(a.params);
+                            _addfmtpToCodec(sdpObj.codecs,fmtp);
+                            break;
+
                     }
                 }
 
