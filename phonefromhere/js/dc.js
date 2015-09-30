@@ -107,9 +107,8 @@ IpseDataChannel.prototype.makeWs = function () {
                             console.log("Set Local description " + JSON.stringify(desc));
                             if (window.showStatus) {
                                 showStatus("Got Answer");
-                                that.sendLocal();
-                                // send answer here
                             }
+                            that.sendLocal();
                         }, function (e) {
                             console.log("Set Local description error " + e);
                         });
