@@ -107,6 +107,7 @@ IpseDataChannel.prototype.makeWs = function () {
                             console.log("Set Local description " + JSON.stringify(desc));
                             if (window.showStatus) {
                                 showStatus("Got Answer");
+                                that.sendLocal();
                                 // send answer here
                             }
                         }, function (e) {
@@ -119,8 +120,6 @@ IpseDataChannel.prototype.makeWs = function () {
             }, function (e) {
                 console.log("Set Remote description error " + e);
             });
-        } else {
-            console.log("no session in my data");
         }
     };
     return socket;
