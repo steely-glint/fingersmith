@@ -174,7 +174,11 @@ IpseDataChannel.prototype.ondatachannel = function (evt) {
 };
 
 IpseDataChannel.prototype.onaddstream = function (evt) {
+    var that = this;
     this.youVid.src = URL.createObjectURL(evt.stream);
+    this.youVid.onloadedmetadata = function(e) {
+        that.youVid.play();
+    };
 };
 
 IpseDataChannel.prototype.sendLocal = function () {
@@ -249,12 +253,15 @@ IpseDataChannel.prototype.createCall = function () {
 
 IpseDataChannel.prototype.createVideo = function (act) {
     var constraints = {
-        video: true,
+        video: { width: 640, height: 480 },
         audio: false // silence is golden in demos.
     };
     var that = this;
     var addstream = function (stream) {
         that.meVid.src = URL.createObjectURL(stream);
+        that.meVid.onloadedmetadata = function(e) {
+            that.meVid.play();
+        };
         that.peerCon.addStream(stream);
         if (act == 'answer'){
             that.createAnswer();
