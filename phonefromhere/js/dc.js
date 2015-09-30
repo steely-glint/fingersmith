@@ -243,8 +243,14 @@ IpseDataChannel.prototype.createCall= function() {
         that.meVid.src = URL.createObjectURL(stream);
         that.peerCon.addStream(stream);
     }
-    if (typeof navigator.mediaDevices.getUserMedia == 'function') {
-        navigator.mediaDevices.getUserMedia(constraints, addstream, this.logError);
+    if ((navigator.mediaDevices) && (typeof navigator.mediaDevices.getUserMedia == 'function')){
+        var p = navigator.mediaDevices.getUserMedia(constraints);
+        p.then(function(stream) {
+            that.meVid.src = URL.createObjectURL(stream);
+            that.peerCon.addStream(stream);
+            }
+        );
+        p.catch(function(e) { that.logError(e) });
     } else if (typeof navigator.mozGetUserMedia == 'function'){
         navigator.mozGetUserMedia(constraints, addstream, this.logError);
     } else if (typeof navigator.webkitGetUserMedia == 'function'){
