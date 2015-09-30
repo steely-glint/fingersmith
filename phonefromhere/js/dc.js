@@ -117,7 +117,7 @@ IpseDataChannel.prototype.makeWs = function () {
                     console.log("their fingerprint is " + theirfp)
                     that.setTo(theirfp);
                     if (that.hasMedia(data,'video')){
-                        that.createVideo(that.createAnswer);
+                        that.createVideo('answer');
                     } else {
                         that.createAnswer();
                     }
@@ -244,7 +244,7 @@ IpseDataChannel.prototype.createDataChannel = function (name, props) {
 }
 
 IpseDataChannel.prototype.createCall = function () {
-    this.createVideo(this.createOffer);
+    this.createVideo('offer');
 }
 
 IpseDataChannel.prototype.createVideo = function (act) {
@@ -256,7 +256,14 @@ IpseDataChannel.prototype.createVideo = function (act) {
     var addstream = function (stream) {
         that.meVid.src = URL.createObjectURL(stream);
         that.peerCon.addStream(stream);
-        act();
+        if (act == 'answer'){
+            that.createAnswer();
+        } else if (act == 'offer'){
+            that.createOffer();
+        } else {
+            console.log("unknown act ? "+act);
+        }
+
     }
     if ((navigator.mediaDevices) && (typeof navigator.mediaDevices.getUserMedia == 'function')) {
         var p = navigator.mediaDevices.getUserMedia(constraints);
