@@ -451,7 +451,7 @@
 
         if (sdpObj.ssrcgroup){
             sdp = sdp + "a=ssrc-group:"+sdpObj.ssrcgroup.id;
-            sdp = sdp + " "+sdpObj.ssrcgroup.a+" "+sdpObj.ssrcgroup.b+"\r\n;"
+            sdp = sdp + " "+sdpObj.ssrcgroup.a+" "+sdpObj.ssrcgroup.b+"\r\n"
         }
         var ssdi =0;
         while (ssdi + 1 <= sdpObj.ssrc.length) {
