@@ -280,8 +280,8 @@
     }
     _parseMsidSem = function(params){
         var sem = {
-            sem:params[0],
-            msid: params[1]
+            sem:params[1],
+            msid: params[2]
         };
         return sem;
     }
