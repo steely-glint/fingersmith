@@ -222,16 +222,26 @@
         return fmtp;
     }
 
-    _parseSsrc = function(params, ssrc) {
-        var ssrcObj = {};
-        if (ssrc != undefined)
-            ssrcObj = ssrc;
-        ssrcObj.ssrc = params[0];
-        var value = params[1];
-        ssrcObj[value.split(":")[0]] = value.split(":")[1];
+    _parseSsrc = function(params) {
+        var values = params[1].split(":");
+        var ssrcObj = {
+            ssrc:params[0],
+            name:values[0],
+            value:values[1]
+        };
+        if (params.length >2) {
+            ssrcObj.extra = params[2];
+        }
         return ssrcObj;
     }
-
+    _parseSsrcGroup = function(params){
+        var sgroup = {
+            id:params[0],
+            a:params[1],
+            b:params[2]
+        };
+        return sgroup;
+    }
     _parseGroup = function(params) {
         var group = {
             type: params[0]
@@ -439,14 +449,19 @@
             edi = edi + 1;
         }
 
-        if (sdpObj.ssrc) {
-            var ssrc = sdpObj.ssrc;
-            if (ssrc.cname)
-                sdp = sdp + "a=ssrc:" + ssrc.ssrc + " " + "cname:" + ssrc.cname + "\r\n";
-            if (ssrc.mslabel)
-                sdp = sdp + "a=ssrc:" + ssrc.ssrc + " " + "mslabel:" + ssrc.mslabel + "\r\n";
-            if (ssrc.label)
-                sdp = sdp + "a=ssrc:" + ssrc.ssrc + " " + "label:" + ssrc.label + "\r\n";
+        if (sdpObj.ssrcgroup){
+            sdp = sdp + "a=ssrc-group:"+sdpObj.ssrcgroup.id;
+            sdp = sdp + " "+sdpObj.ssrcgroup.a+" "+sdpObj.ssrcgroup.b+"\r\n;"
+        }
+        var ssdi =0;
+        while (ssdi + 1 <= sdpObj.ssrc.length) {
+            var ssrc = sdpObj.ssrc[ssdi];
+            sdp = sdp + "a=ssrc:" + ssrc.ssrc + " " + ssrc.name+":" + ssrc.value;
+            if (ssrc.extra){
+                sdp = sdp + " "+ ssrc.extra;
+            }
+            sdp = sdp +"\r\n";
+            ssdi = ssdi +1;
         }
 
         return sdp;
@@ -494,6 +509,7 @@
                     sdpObj.codecs = [];
                     sdpObj.sctpmap = [];
                     sdpObj.extmap = [];
+                    sdpObj.ssrc = [];
                     sdpObj.ice = sessionSDP.ice;
                     if (sessionSDP.fingerprint != null) {
                         sdpObj.fingerprint = sessionSDP.fingerprint;
@@ -553,7 +569,11 @@
                             sdpObj.recvonly = "recvonly";
                             break;
                         case "ssrc":
-                            sdpObj.ssrc = _parseSsrc(a.params, sdpObj.ssrc);
+                            var ssrc = _parseSsrc(a.params);
+                            sdpObj.ssrc.push(ssrc);
+                            break;
+                        case "ssrc-group":
+                            sdpObj.ssrcgroup = _parseSsrcGroup(a.params);
                             break;
                         case "fingerprint":
                             var print = _parseFingerprint(a.params);
