@@ -9,7 +9,7 @@ var IpseDataChannel = function (finger, wssLoc) {
     this.youVid = undefined;
 
     var configuration = {
-        "iceServers": [
+        iceServers: [
             {urls: "stun:146.148.121.175:3478"},
             {
                 urls: 'turn:146.148.121.175:3478',
@@ -22,7 +22,6 @@ var IpseDataChannel = function (finger, wssLoc) {
                 credential: 'charliebrown'
             },
             {urls: "stun:stun.l.google.com:19302"},
-
         ]
     };
     if (typeof webkitRTCPeerConnection == "function") {
@@ -31,7 +30,8 @@ var IpseDataChannel = function (finger, wssLoc) {
     } else if (typeof mozRTCPeerConnection == "function") {
         var that = this;
         Ipseorama.addMyCertToPeerConf(configuration, function () {
-            var mozpc = new mozRTCPeerConnection(configuration, null)
+            console.log("peer config is "+JSON.stringify(configuration));
+            var mozpc = new mozRTCPeerConnection(configuration, null);
             that.withPc(mozpc);
         });
     }
