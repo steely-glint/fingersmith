@@ -7,6 +7,7 @@ var IpseDataChannel = function (finger, wssLoc) {
     this.peerCon = undefined;
     this.meVid = undefined;
     this.youVid = undefined;
+    this.srcCanvas = undefined;
 
     var configuration = {
         iceServers: [
@@ -41,6 +42,10 @@ var IpseDataChannel = function (finger, wssLoc) {
 IpseDataChannel.prototype.setVideoElms = function (me, you) {
     this.meVid = me;
     this.youVid = you;
+}
+
+IpseDataChannel.prototype.setSrcCanvas = function (them) {
+    this.srcCanvas = them;
 }
 
 IpseDataChannel.prototype.makeWSUrl = function () {
@@ -282,16 +287,22 @@ IpseDataChannel.prototype.createVideo = function (act) {
         }
 
     }
-    if ((navigator.mediaDevices) && (typeof navigator.mediaDevices.getUserMedia == 'function')) {
-        var p = navigator.mediaDevices.getUserMedia(constraints);
-        p.then(addstream);
-        p.catch(that.logError);
-    } else if (typeof navigator.mozGetUserMedia == 'function') {
-        navigator.mozGetUserMedia(constraints, addstream, this.logError);
-    } else if (typeof navigator.webkitGetUserMedia == 'function') {
-        navigator.webkitGetUserMedia(constraints, addstream, this.logError);
+    if (this.srcCanvas){
+        var stream = this.srcCanvas.captureStream(20); // 25 FPS
+        console.log("grabbed stream from a canvas");
+        addStream(stream);
     } else {
-        console.log("No Gum ?");
+        if ((navigator.mediaDevices) && (typeof navigator.mediaDevices.getUserMedia == 'function')) {
+            var p = navigator.mediaDevices.getUserMedia(constraints);
+            p.then(addstream);
+            p.catch(that.logError);
+        } else if (typeof navigator.mozGetUserMedia == 'function') {
+            navigator.mozGetUserMedia(constraints, addstream, this.logError);
+        } else if (typeof navigator.webkitGetUserMedia == 'function') {
+            navigator.webkitGetUserMedia(constraints, addstream, this.logError);
+        } else {
+            console.log("No Gum ?");
+        }
     }
 }
 
