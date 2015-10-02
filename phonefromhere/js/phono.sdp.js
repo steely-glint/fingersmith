@@ -415,9 +415,7 @@
             sdp = sdp + "a=mid:" + sdpObj.mid + "\r\n";
         }
 
-        if (sdpObj.msidsem) {
-            sdp = sdp + "a=msid-semantic: " + sdpObj.msidsem.sem +" "+sdpObj.msidsem.msid+ "\r\n";
-        }
+
 
         if (sdpObj.setup) {
             sdp = sdp + "a=setup:" + sdpObj.setup + "\r\n";
@@ -579,7 +577,7 @@
                             break;
                         case "msid-semantic":
                             var msidsem = _parseMsidSem(a.params);
-                            sdpObj.msidsem = msidsem;
+                            contentsObj.msidsem = msidsem;
                             break;
                         case "rtcp":
                             var rtcp = _parseRtcp(a.params);
@@ -685,7 +683,9 @@
                 }
                 sdp = sdp + "\r\n";
             }
-
+            if (contentsObj.msidsem) {
+                sdp = sdp + "a=msid-semantic: " + contentsObj.msidsem.sem +" "+contentsObj.msidsem.msid+ "\r\n";
+            }
             var contents = contentsObj.contents;
             var ic = 0;
             while (ic + 1 <= contents.length) {
