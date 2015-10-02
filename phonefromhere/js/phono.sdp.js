@@ -1,4 +1,3 @@
-
 /* derived from Phono with original license quoted here */
 /*!
  * Copyright 2013 Voxeo Labs, Inc.
@@ -17,12 +16,12 @@
  * permissions and limitations under the License.
  */
 ;
-(function() {
+(function () {
 
     // Helper library to translate to and from SDP and an intermediate javascript object
     // representation of candidates, offers and answers
 
-    _parseLine = function(line) {
+    _parseLine = function (line) {
         var s1 = line.split("=");
         return {
             type: s1.shift(),
@@ -30,7 +29,7 @@
         }
     }
 
-    _parseA = function(attribute) {
+    _parseA = function (attribute) {
         var s1 = attribute.split(":");
         return {
             key: s1[0],
@@ -38,7 +37,7 @@
         }
     }
 
-    _parseM = function(media) {
+    _parseM = function (media) {
         var s1 = media.split(" ");
         return {
             type: s1[0],
@@ -48,7 +47,7 @@
         }
     }
 
-    _parseO = function(media) {
+    _parseO = function (media) {
         var s1 = media.split(" ");
         return {
             username: s1[0],
@@ -60,7 +59,7 @@
         }
     }
 
-    _parseC = function(media) {
+    _parseC = function (media) {
         var s1 = media.split(" ");
         return {
             nettype: s1[0],
@@ -82,7 +81,7 @@
      [SP rel-port]
      *(SP extension-att-name SP
      extension-att-value)
-     
+
      foundation            = 1*32ice-char
      component-id          = 1*5DIGIT
      transport             = "UDP" / transport-extension
@@ -96,7 +95,7 @@
      extension-att-value   = byte-string
      ice-char              = ALPHA / DIGIT / "+" / "/"
      */
-    _parseCandidate = function(params) {
+    _parseCandidate = function (params) {
         var candidate = {
             foundation: params[0],
             component: params[1],
@@ -126,7 +125,7 @@
     }
 
     //a=rtcp:1 IN IP4 0.0.0.0
-    _parseRtcp = function(params) {
+    _parseRtcp = function (params) {
         var rtcp = {
             port: params[0]
         };
@@ -139,7 +138,7 @@
     }
 
     //a=crypto:1 AES_CM_128_HMAC_SHA1_80 inline:zvrxmXFpomTqz7CJYhN5G7JM3dVVxG/fZ0Il6DDo
-    _parseCrypto = function(params) {
+    _parseCrypto = function (params) {
         var crypto = {
             'tag': params[0],
             'crypto-suite': params[1],
@@ -147,7 +146,7 @@
         }
         return crypto;
     }
-    _parseFingerprint = function(params) {
+    _parseFingerprint = function (params) {
         var finger = {
             'hash': params[0],
             'print': params[1],
@@ -156,27 +155,27 @@
         return finger;
     }
 
-    _addRtpMapToCodec = function(codecs,cc){
+    _addRtpMapToCodec = function (codecs, cc) {
         var found = false;
         for (n in codecs) {
             var codec = codecs[n];
-            if (codec.id == cc.id){
+            if (codec.id == cc.id) {
                 found = true;
                 codec.name = cc.name;
                 codec.clockrate = cc.clockrate;
-                if (cc.channels){
+                if (cc.channels) {
                     codec.channels = cc.channels;
                 }
                 break;
             }
         }
-        if (!found){
+        if (!found) {
             codecs.push(cc);
         }
     }
 
     //a=rtpmap:101 telephone-event/8000"
-    _parseRtpmap = function(params) {
+    _parseRtpmap = function (params) {
         var bits = params[1].split("/");
         var codec = {
             id: params[0],
@@ -189,7 +188,7 @@
         return codec;
     }
     // a=sctpmap:5000 webrtc-datachannel 256
-    _parseSctpmap = function(params){
+    _parseSctpmap = function (params) {
         var dc = {
             port: params[0],
             app: params[1],
@@ -197,43 +196,43 @@
         }
         return dc;
     }
-    _parseExtmap = function(params){
+    _parseExtmap = function (params) {
         var ext = {
             num: params[0],
             name: params[1]
         }
         return ext;
     }
-    _addFbToCodec = function(codecs,rtcpfb){
+    _addFbToCodec = function (codecs, rtcpfb) {
         for (n in codecs) {
             var codec = codecs[n];
-            if (codec.id == rtcpfb.id){
-                if (!codec.rtcpfbs){
+            if (codec.id == rtcpfb.id) {
+                if (!codec.rtcpfbs) {
                     codec.rtcpfbs = [];
                 }
                 codec.rtcpfbs.push(rtcpfb)
             }
         }
     }
-    _parseRtcpFb = function(params){
+    _parseRtcpFb = function (params) {
         var rtcpfb = {
             id: params.shift(),
             args: params
         }
         return rtcpfb;
     }
-    _addfmtpToCodec = function(codecs,fmtp){
+    _addfmtpToCodec = function (codecs, fmtp) {
         for (n in codecs) {
             var codec = codecs[n];
-            if (codec.id == fmtp.id){
-                if (!codec.fmtps){
+            if (codec.id == fmtp.id) {
+                if (!codec.fmtps) {
                     codec.fmtps = [];
                 }
                 codec.fmtps.push(fmtp)
             }
         }
     }
-    _parsefmtp = function(params){
+    _parsefmtp = function (params) {
         var fmtp = {
             id: params.shift(),
             args: params
@@ -241,27 +240,27 @@
         return fmtp;
     }
 
-    _parseSsrc = function(params) {
+    _parseSsrc = function (params) {
         var values = params[1].split(":");
         var ssrcObj = {
-            ssrc:params[0],
-            name:values[0],
-            value:values[1]
+            ssrc: params[0],
+            name: values[0],
+            value: values[1]
         };
-        if (params.length >2) {
+        if (params.length > 2) {
             ssrcObj.extra = params[2];
         }
         return ssrcObj;
     }
-    _parseSsrcGroup = function(params){
+    _parseSsrcGroup = function (params) {
         var sgroup = {
-            id:params[0],
-            a:params[1],
-            b:params[2]
+            id: params[0],
+            a: params[1],
+            b: params[2]
         };
         return sgroup;
     }
-    _parseGroup = function(params) {
+    _parseGroup = function (params) {
         var group = {
             type: params[0]
         }
@@ -274,33 +273,33 @@
         return group;
     }
 
-    _parseMid = function(params) {
+    _parseMid = function (params) {
         var mid = params[0];
         return mid;
     }
-    _parseMsidSem = function(params){
+    _parseMsidSem = function (params) {
         var sem = {
-            sem:params[1],
+            sem: params[1],
             msid: params[2]
         };
         return sem;
     }
-    
-    _parseSetup = function(params) {
+
+    _parseSetup = function (params) {
         var setup = params[0];
         return setup;
     }
 
     // Object -> SDP
 
-    _buildCandidate = function(candidateObj, iceObj) {
+    _buildCandidate = function (candidateObj, iceObj) {
         var c = candidateObj;
         var sdp = "a=candidate:" + c.foundation + " " +
-                c.component + " " +
-                c.protocol.toUpperCase() + " " +
-                c.priority + " " +
-                c.ip + " " +
-                c.port;
+            c.component + " " +
+            c.protocol.toUpperCase() + " " +
+            c.priority + " " +
+            c.ip + " " +
+            c.port;
         if (c.type)
             sdp = sdp + " typ " + c.type;
         if (c.raddr)
@@ -334,15 +333,15 @@
         return sdp;
     }
 
-    _buildSctpmap = function(sctpObj){
-        return "a=sctpmap:"+sctpObj.port + " " + sctpObj.app + " " + sctpObj.count + "\r\n";
+    _buildSctpmap = function (sctpObj) {
+        return "a=sctpmap:" + sctpObj.port + " " + sctpObj.app + " " + sctpObj.count + "\r\n";
     }
 
-    _buildExtmap = function(extObj){
-        return "a=extmap:"+extObj.num + " " + extObj.name + "\r\n";
+    _buildExtmap = function (extObj) {
+        return "a=extmap:" + extObj.num + " " + extObj.name + "\r\n";
     }
 
-    _buildCodec = function(codecObj) {
+    _buildCodec = function (codecObj) {
         var sdp = "a=rtpmap:" + codecObj.id + " " + codecObj.name + "/" + codecObj.clockrate
         if (codecObj.channels) {
             sdp += "/" + codecObj.channels;
@@ -352,37 +351,37 @@
             sdp += "a=ptime:" + codecObj.ptime;
             sdp += "\r\n";
         }
-        if (codecObj.rtcpfbs){
+        if (codecObj.rtcpfbs) {
             var rtcpfbs = codecObj.rtcpfbs;
-            for (n in rtcpfbs){
+            for (n in rtcpfbs) {
                 var rtcpfb = rtcpfbs[n];
-                sdp += "a=rtcp-fb:" + rtcpfb.id +" "+ rtcpfb.args.join(" ");
+                sdp += "a=rtcp-fb:" + rtcpfb.id + " " + rtcpfb.args.join(" ");
                 sdp += "\r\n";
             }
         }
-        if (codecObj.fmtps){
+        if (codecObj.fmtps) {
             var fmtps = codecObj.fmtps;
-            for (n in fmtps){
+            for (n in fmtps) {
                 var fmtp = fmtps[n];
-                sdp += "a=fmtp:" + fmtp.id +" "+ fmtp.args.join(" ");
+                sdp += "a=fmtp:" + fmtp.id + " " + fmtp.args.join(" ");
                 sdp += "\r\n";
             }
         }
         return sdp;
     }
 
-    _buildCrypto = function(cryptoObj) {
+    _buildCrypto = function (cryptoObj) {
         var sdp = "a=crypto:" + cryptoObj.tag + " " + cryptoObj['crypto-suite'] + " " +
-                cryptoObj["key-params"] + "\r\n";
+            cryptoObj["key-params"] + "\r\n";
         return sdp;
     }
 
-    _buildFingerprint = function(fingerObj) {
+    _buildFingerprint = function (fingerObj) {
         var sdp = "a=fingerprint:" + fingerObj.hash + " " + fingerObj.print + "\r\n";
         return sdp;
     }
 
-    _buildMedia = function(sdpObj) {
+    _buildMedia = function (sdpObj) {
         var sdp = "";
 // move fingerprint and ice to outside the m=
         if (sdpObj.fingerprint) {
@@ -408,13 +407,12 @@
 
         if (sdpObj.connection) {
             sdp = sdp + "c=" + sdpObj.connection.nettype + " " + sdpObj.connection.addrtype + " " +
-                    sdpObj.connection.address + "\r\n";
+                sdpObj.connection.address + "\r\n";
         }
 
         if (sdpObj.mid) {
             sdp = sdp + "a=mid:" + sdpObj.mid + "\r\n";
         }
-
 
 
         if (sdpObj.setup) {
@@ -423,8 +421,8 @@
 
         if (sdpObj.rtcp) {
             sdp = sdp + "a=rtcp:" + sdpObj.rtcp.port + " " + sdpObj.rtcp.nettype + " " +
-                    sdpObj.rtcp.addrtype + " " +
-                    sdpObj.rtcp.address + "\r\n";
+                sdpObj.rtcp.addrtype + " " +
+                sdpObj.rtcp.address + "\r\n";
         }
 
         var ci = 0;
@@ -449,7 +447,6 @@
         }
 
 
-
         if (sdpObj['rtcp-mux']) {
             sdp = sdp + "a=rtcp-mux" + "\r\n";
         }
@@ -466,8 +463,8 @@
 
         var sdi = 0;
         while (sdi + 1 <= sdpObj.sctpmap.length) {
-              sdp = sdp + _buildSctpmap(sdpObj.sctpmap[sdi]);
-              sdi = sdi + 1;
+            sdp = sdp + _buildSctpmap(sdpObj.sctpmap[sdi]);
+            sdi = sdi + 1;
         }
 
 
@@ -477,19 +474,19 @@
             edi = edi + 1;
         }
 
-        if (sdpObj.ssrcgroup){
-            sdp = sdp + "a=ssrc-group:"+sdpObj.ssrcgroup.id;
-            sdp = sdp + " "+sdpObj.ssrcgroup.a+" "+sdpObj.ssrcgroup.b+"\r\n"
+        if (sdpObj.ssrcgroup) {
+            sdp = sdp + "a=ssrc-group:" + sdpObj.ssrcgroup.id;
+            sdp = sdp + " " + sdpObj.ssrcgroup.a + " " + sdpObj.ssrcgroup.b + "\r\n"
         }
-        var ssdi =0;
+        var ssdi = 0;
         while (ssdi + 1 <= sdpObj.ssrc.length) {
             var ssrc = sdpObj.ssrc[ssdi];
-            sdp = sdp + "a=ssrc:" + ssrc.ssrc + " " + ssrc.name+":" + ssrc.value;
-            if (ssrc.extra){
-                sdp = sdp + " "+ ssrc.extra;
+            sdp = sdp + "a=ssrc:" + ssrc.ssrc + " " + ssrc.name + ":" + ssrc.value;
+            if (ssrc.extra) {
+                sdp = sdp + " " + ssrc.extra;
             }
-            sdp = sdp +"\r\n";
-            ssdi = ssdi +1;
+            sdp = sdp + "\r\n";
+            ssdi = ssdi + 1;
         }
 
         return sdp;
@@ -500,16 +497,18 @@
     // Fake Phono for node.js or loose use
     if (typeof Phono == 'undefined') {
         Phono = {
-            log: {debug: function(mess) {
+            log: {
+                debug: function (mess) {
                     console.log(mess);
-                }}
+                }
+            }
         };
     }
 
     Phono.sdp = {
         // sdp: an SDP text string representing an offer or answer, missing candidates
         // Return an object representing the SDP in Jingle like constructs
-        parseSDP: function(sdpString) {
+        parseSDP: function (sdpString) {
             var contentsObj = {};
             contentsObj.contents = [];
             var sessionSDP = {ice: {}};
@@ -519,9 +518,9 @@
             var sdpLines = sdpString.split("\r\n");
             for (var sdpLine in sdpLines) {
                 var sline = sdpLines[sdpLine];
-                Phono.log.debug("line is "+sline);
-                if (typeof sline == "function"){
-                 continue;
+                Phono.log.debug("line is " + sline);
+                if (typeof sline == "function") {
+                    continue;
                 }
                 var line = _parseLine(sline);
 
@@ -535,8 +534,8 @@
                     sdpObj = {};
                     sdpObj.candidates = [];
                     sdpObj.codecs = [];
-                    for (var i in media.pts){
-                        var codec = {id:media.pts[i]};
+                    for (var i in media.pts) {
+                        var codec = {id: media.pts[i]};
                         sdpObj.codecs.push(codec);
                     }
                     sdpObj.sctpmap = [];
@@ -588,11 +587,11 @@
                             break;
                         case "rtpmap":
                             var rtpmap = _parseRtpmap(a.params);
-                            _addRtpMapToCodec(sdpObj.codecs,rtpmap);
+                            _addRtpMapToCodec(sdpObj.codecs, rtpmap);
                             break;
                         case "rtcp-fb":
                             var rtcpfb = _parseRtcpFb(a.params);
-                            _addFbToCodec(sdpObj.codecs,rtcpfb);
+                            _addFbToCodec(sdpObj.codecs, rtcpfb);
                             break;
                         case "sendrecv":
                             sdpObj.direction = "sendrecv";
@@ -639,7 +638,7 @@
                             break;
                         case "fmtp":
                             var fmtp = _parsefmtp(a.params);
-                            _addfmtpToCodec(sdpObj.codecs,fmtp);
+                            _addfmtpToCodec(sdpObj.codecs, fmtp);
                             break;
 
                     }
@@ -650,15 +649,15 @@
         },
         // sdp: an object representing the body
         // Return a text string in SDP format  
-        buildSDP: function(contentsObj) {
+        buildSDP: function (contentsObj) {
             // Write some constant stuff
             var session = contentsObj.session;
             var sdp =
-                    "v=0\r\n";
+                "v=0\r\n";
             if (contentsObj.session) {
                 var session = contentsObj.session;
                 sdp = sdp + "o=" + session.username + " " + session.id + " " + session.ver + " " +
-                        session.nettype + " " + session.addrtype + " " + session.address + "\r\n";
+                    session.nettype + " " + session.addrtype + " " + session.address + "\r\n";
             } else {
                 var id = new Date().getTime();
                 var ver = 2;
@@ -666,12 +665,12 @@
             }
 
             sdp = sdp + "s=-\r\n" +
-                    "t=0 0\r\n";
+                "t=0 0\r\n";
 
             if (contentsObj.connection) {
                 var connection = contentsObj.connection;
                 sdp = sdp + "c=" + connection.nettype + " " + connection.addrtype +
-                        " " + connection.address + "\r\n";
+                    " " + connection.address + "\r\n";
             }
             if (contentsObj.group) {
                 var group = contentsObj.group;
@@ -684,7 +683,11 @@
                 sdp = sdp + "\r\n";
             }
             if (contentsObj.msidsem) {
-                sdp = sdp + "a=msid-semantic: " + contentsObj.msidsem.sem +" "+contentsObj.msidsem.msid+ "\r\n";
+                sdp = sdp + "a=msid-semantic: " + contentsObj.msidsem.sem
+                if (contentsObj.msidsem.msid) {
+                    sdp = sdp + " " + contentsObj.msidsem.msid
+                }
+                sdp = sdp + "\r\n";
             }
             var contents = contentsObj.contents;
             var ic = 0;
@@ -697,14 +700,14 @@
         },
         // candidate: an SDP text string representing a cadidate
         // Return: an object representing the candidate in Jingle like constructs
-        parseCandidate: function(candidateSDP) {
+        parseCandidate: function (candidateSDP) {
             var line = _parseLine(candidateSDP);
             if (line.contents)
                 return _parseCandidate(line.contents.substring(line.contents.indexOf(":") + 1).split(" "));
         },
         // candidate: an object representing the body
         // Return a text string in SDP format
-        buildCandidate: function(candidateObj) {
+        buildCandidate: function (candidateObj) {
             return _buildCandidate(candidateObj);
         }
     };
