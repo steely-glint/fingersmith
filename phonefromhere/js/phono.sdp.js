@@ -259,6 +259,13 @@
         var mid = params[0];
         return mid;
     }
+    _parseMsidSem = function(params){
+        var sem = {
+            sem:params[0],
+            msid: params[1]
+        };
+        return sem;
+    }
     
     _parseSetup = function(params) {
         var setup = params[0];
@@ -388,6 +395,10 @@
         if (sdpObj.mid) {
             sdp = sdp + "a=mid:" + sdpObj.mid + "\r\n";
         }
+        
+        if (sdpObj.msidsem) {
+            sdp = sdp + "a=msid-semantic: " + sdpObj.msidsem.sem +" "+sdpObj.msidsem.msid+ "\r\n";
+        }
 
         if (sdpObj.setup) {
             sdp = sdp + "a=setup:" + sdpObj.setup + "\r\n";
@@ -507,6 +518,10 @@
                     sdpObj = {};
                     sdpObj.candidates = [];
                     sdpObj.codecs = [];
+                    for (var i in media.pts){
+                        var codec = {id:media.pts[i]};
+                        sdpObj.codecs.push(codec);
+                    }
                     sdpObj.sctpmap = [];
                     sdpObj.extmap = [];
                     sdpObj.ssrc = [];
@@ -542,6 +557,10 @@
                         case "mid":
                             var mid = _parseMid(a.params);
                             sdpObj.mid = mid;
+                            break;
+                        case "msid-semantic":
+                            var msidsem = _parseMsidSem(a.params);
+                            sdpObj.msidsem = msidsem;
                             break;
                         case "rtcp":
                             var rtcp = _parseRtcp(a.params);
