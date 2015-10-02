@@ -156,6 +156,25 @@
         return finger;
     }
 
+    _addRtpMapToCodec = function(codecs,cc){
+        var found = false;
+        for (n in codecs) {
+            var codec = codecs[n];
+            if (codec.id == cc.id){
+                found = true;
+                codec.name = cc.name;
+                codec.clockrate = cc.clockrate;
+                if (cc.channels){
+                    codec.channels = cc.channels;
+                }
+                break;
+            }
+        }
+        if (!found){
+            codecs.push(cc);
+        }
+    }
+
     //a=rtpmap:101 telephone-event/8000"
     _parseRtpmap = function(params) {
         var bits = params[1].split("/");
@@ -395,7 +414,7 @@
         if (sdpObj.mid) {
             sdp = sdp + "a=mid:" + sdpObj.mid + "\r\n";
         }
-        
+
         if (sdpObj.msidsem) {
             sdp = sdp + "a=msid-semantic: " + sdpObj.msidsem.sem +" "+sdpObj.msidsem.msid+ "\r\n";
         }
@@ -570,9 +589,8 @@
                             sdpObj['rtcp-mux'] = true;
                             break;
                         case "rtpmap":
-                            var codec = _parseRtpmap(a.params);
-                            if (codec)
-                                sdpObj.codecs.push(codec);
+                            var rtpmap = _parseRtpmap(a.params);
+                            _addRtpMapToCodec(sdpObj.codecs,rtpmap);
                             break;
                         case "rtcp-fb":
                             var rtcpfb = _parseRtcpFb(a.params);
