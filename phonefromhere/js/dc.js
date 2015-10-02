@@ -290,7 +290,7 @@ IpseDataChannel.prototype.createVideo = function (act) {
     if (this.srcCanvas){
         var stream = this.srcCanvas.captureStream(20); // 25 FPS
         console.log("grabbed stream from a canvas");
-        addStream(stream);
+        addstream(stream);
     } else {
         if ((navigator.mediaDevices) && (typeof navigator.mediaDevices.getUserMedia == 'function')) {
             var p = navigator.mediaDevices.getUserMedia(constraints);
