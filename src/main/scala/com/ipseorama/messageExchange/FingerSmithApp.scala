@@ -58,10 +58,6 @@ object FingerSmithApp extends Logger {
     log-network-activity=false
     web-log {
     }
-    ssl {
-       key-store-file=$keystore
-       key-store-password=$password
-    }
   }
 
 	akka {
