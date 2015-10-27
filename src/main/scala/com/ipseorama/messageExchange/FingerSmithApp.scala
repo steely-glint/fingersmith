@@ -43,8 +43,6 @@ object FingerSmithApp extends Logger {
   // STEP #1 - Define Actors and Start Akka
   // `ChatHandler` is created in the route and is self-terminating
   //
-  val password = System.getProperty("keypass")
-  val keystore = System.getProperty("keystore","/project2/westhawk/keys/wildcard/wildwesthawk.ks")
   val actorConfig = s"""
 	my-pinned-dispatcher {
 	  type=PinnedDispatcher
