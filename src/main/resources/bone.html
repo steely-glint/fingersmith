@@ -10,6 +10,7 @@
   var myFinger = undefined;
   var ipsed = null;
   var chout;
+  var nonceS;
   function gotFinger(finger){
     myFinger = finger;
     $('#myFinger').html(finger);
@@ -66,7 +67,9 @@
                     console.log("got qrcode of " + code);
                     clearInterval(tick);
                     navigator.vibrate(50);
-                    $('#tofinger').val(code);
+                    var fparts = code.split(":");
+                    $('#tofinger').val(fparts[0]);
+                    nonceS = fparts[1];
                     $("#qr-canvas").remove();
                     $("#gumVideo").css("display","block");
                 };
