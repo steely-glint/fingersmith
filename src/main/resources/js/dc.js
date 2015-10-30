@@ -97,7 +97,7 @@ function IpseDataChannel(finger) {
                 console.log("this.toFinger:" + this.toFinger);
                 console.log("toFinger:" + toFinger);
                 console.log("that.toFinger:" + that.toFinger);
-                nonsense = Sha256.hash(that.toFinger +":"+that.nonceS+":"+that.myFinger);
+                nonsense = sha256.hash(that.toFinger +":"+that.nonceS+":"+that.myFinger).toUpperCase();
                 // add sha256 here in a moment.
                 var sdpcontext = {
                 "to": that.toFinger,
