@@ -1,16 +1,19 @@
 <html><head><title>Socko Web Socket Example</title></head>
+    <!--script src=""></script>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script-->
+    <script src="js/require.js"></script>
     <script src="js/jquery-1.8.3.js"></script>
     <script src="js/phono.sdp.js"></script>
     <script src="js/ipseorama.js"></script>
     <script src="js/dc.js"></script>
     <script src="js/LazarQr.min.js"></script>
     <script src="js/adapter.js"></script>
-
     <script type="text/javascript">
   var myFinger = undefined;
   var ipsed = null;
   var chout;
   var nonceS;
+  var sha256 =  require("js/sha256");
   function gotFinger(finger){
     myFinger = finger;
     $('#myFinger').html(finger);
@@ -35,6 +38,7 @@
     console.log("setting toFinger"+tofinger);
 
     ipsed.setTo(tofinger);
+    ipsed.setNonce(nonceS);
     var channel = ipsed.createDataChannel("test",{});
     channel.onopen = function() {
         // e.g. enable send button
@@ -70,6 +74,7 @@
                     var fparts = code.split(":");
                     $('#tofinger').val(fparts[0]);
                     nonceS = fparts[1];
+                    console.log("nonce = "+nonceS)
                     $("#qr-canvas").remove();
                     $("#gumVideo").css("display","block");
                 };

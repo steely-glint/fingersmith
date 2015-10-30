@@ -3,8 +3,10 @@ function IpseDataChannel(finger) {
     var ws = null;
     var session;
     var toFinger;
+    var myFinger;
     var peerCon;
     var that = this;
+    var nonceS =null;
 
     var makeWs = function(finger) {
         if (!window.WebSocket) {
@@ -14,6 +16,7 @@ function IpseDataChannel(finger) {
             alert("Your browser does not support Web Sockets.");
             return;
         }
+
         var socket, protocol, host, port;
         protocol = "ws:"
         if (window.location.protocol === "https:") {
@@ -94,8 +97,16 @@ function IpseDataChannel(finger) {
                 console.log("this.toFinger:" + this.toFinger);
                 console.log("toFinger:" + toFinger);
                 console.log("that.toFinger:" + that.toFinger);
-
-                var sdpcontext = {"to": that.toFinger, "type": pc.localDescription.type, "sdp": sdpObj, "session": session};
+                nonsense = Sha256.hash(that.toFinger +":"+that.nonceS+":"+that.myFinger);
+                // add sha256 here in a moment.
+                var sdpcontext = {
+                "to": that.toFinger,
+                "from": that.myFinger,
+                "type": pc.localDescription.type,
+                "sdp": sdpObj,
+                "session": session,
+                "nonsense":nonsense
+                };
                 console.log("sending:" + JSON.stringify(sdpcontext))
 
                 that.ws.send(JSON.stringify(sdpcontext));
@@ -124,6 +135,7 @@ function IpseDataChannel(finger) {
                 that.ondatachannel(evt);
             }
         };
+        that.myFinger = finger;
         that.ws = makeWs(finger);
     }
     var configuration = {"iceServers": [
@@ -149,7 +161,10 @@ IpseDataChannel.prototype.setTo = function(tof) {
     var n = d.getTime();
     this.session = this.finger + "-" + tof + "-" + n; // fix this
     console.log("this.toFinger:" + this.toFinger);
-}
+};
+IpseDataChannel.prototype.setNonce= function(n){
+    this.nonceS = n;
+};
 IpseDataChannel.prototype.setOnDataChannel = function(callback) {
     this.ondatachannel = function(evt) {
         callback(evt.channel);
