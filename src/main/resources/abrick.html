@@ -1,16 +1,30 @@
 <html><head><title>Lego Dog Driver</title>
-<meta name="viewport"
-      content="
-          height = device-height ,
-          width = device-width ,
-          initial-scale = 1.0 ,
-          minimum-scale = 0.2 ,
-          maximum-scale = 5.0 ,
-          user-scalable = yes
-" />
+<meta name=viewport content="height=device-height, width=device-width, initial-scale=1.0 " />
 </head>
 <body>
-    <script src="js/require.js"></script>
+<style>
+    @media (min-width: 960px) {
+    .gauge {
+        width: 300px;
+        height: 300px;
+    }
+    .control {
+    width: 200px;
+    height: 100px;
+    }
+    }
+    @media (min-width: 660px) {
+    .gauge {
+    width: 200px;
+    height: 200px;
+    }
+    .control {
+    width: 150px;
+    height: 75px;
+    }
+    }
+</style>
+<script src="js/require.js"></script>
     <script src="js/jquery-1.8.3.js"></script>
     <script src="js/phono.sdp.js"></script>
     <script src="js/ipseorama.js"></script>
@@ -248,9 +262,9 @@
         <video style="display:none;" width="480" height="480" id="gumVideo" autoplay="autoplay"/>
     </div>
 <div id="gaugeContainer">
-    <canvas width="300" height="300" id="batteryG"></canvas>
-    <canvas width="300" height="300" id="headingG"></canvas>
-    <canvas width="300" height="300" id="distanceG"></canvas>
+    <canvas class="gauge" id="batteryG"></canvas>
+    <canvas class="gauge" id="headingG"></canvas>
+    <canvas class="gauge" id="distanceG"></canvas>
 </div>
 <div id="connect">
 <form onsubmit="return false;">
@@ -261,16 +275,16 @@
 <div id="caller">
     <div id="status"></div>
     <div id="controls" style="display:none;">
-        <button id="connectButton" type="button" value="Forward" onClick="button('F')" style="width:200px;height:100px;" >
+        <button id="connectButton" type="button" value="Forward" onClick="button('F')" class="control" >
             Forward&nbsp;
         </button>
-        <button  id="hangupButton" type="button" value="Back" onClick="button('B')" style="width:200px;height:100px;" >
+        <button  id="hangupButton" type="button" value="Back" onClick="button('B')" class="control" >
             Back&nbsp;
         </button>
-        <button  id="wakeButton" type="button" value="Left" onClick="button('L')" style="width:200px;height:100px;" >
+        <button  id="wakeButton" type="button" value="Left" onClick="button('L')" class="control" >
             Left&nbsp;
         </button>
-        <button  id="forgetButton" type="button" value="Right" onClick="button('R')" style="width:200px;height:100px;" >
+        <button  id="forgetButton" type="button" value="Right" onClick="button('R')" class="control" >
             Right&nbsp;
         </button>
     </div>
