@@ -2,10 +2,36 @@
  * soucecode copyright Westhawk Ltd 2014 - all rights reserved.
  */
 
-;
+window.indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
+
+window.IDBTransaction = window.IDBTransaction || window.webkitIDBTransaction || window.msIDBTransaction || {READ_WRITE: "readwrite"}; // This line should only be needed if it is needed to support the object's constants for older browsers
+window.IDBKeyRange = window.IDBKeyRange || window.webkitIDBKeyRange || window.msIDBKeyRange;
+if (!window.indexedDB) {
+    window.alert("Your browser doesn't support a stable version of IndexedDB. Persistent certs feature will not be available.");
+}
+
 (function() {
     Ipseorama = {
         db: null,
+        cleanDb: function(app, doneCB){
+            var request =indexedDB.deleteDatabase("ipseorama");
+            request.onsuccess = function() {
+                console.log("Indexdb.deleteDatabase() ok");
+            };
+            request.onerror = function(event) {
+                console.log("Indexdb.deleteDatabase() error is "+event.target.error.message);
+            };
+            request.onblocked = function(event) {
+                console.log("Indexdb.deleteDatabase() blocked.");
+            };
+        },
+        dbDone: function(){
+            if (Ipseorama.db != null){
+                console.log("close db");
+                Ipseorama.db.close();
+                Ipseorama.db=null;
+               }
+        },
         createCert: function(app, doneCB) {
             console.log("create a new cert");
             var creq = mozRTCPeerConnection.generateCertificate({name: "ECDSA", namedCurve: "P-256"})
@@ -15,6 +41,7 @@
                 console.log("created a new cert, now store it.");
                 var tx = Ipseorama.db.transaction("IpseCert", "readwrite");
                 tx.oncomplete = function() {
+                    Ipseorama.dbDone();
                     doneCB(cert);
                     console.log("transaction done .");
                 };
@@ -32,7 +59,6 @@
 
             }
             );
-
         },
         findOrCreateCert: function(app, doneCB) {
             var tx = Ipseorama.db.transaction("IpseCert", "readonly");
@@ -42,6 +68,10 @@
 
             var request = index.get(app);
             request.onsuccess = function(ev) {
+                console.log("ev "+JSON.stringify(ev));
+                console.log("request "+JSON.stringify(request));
+                console.log("this "+JSON.stringify(this));
+
                 var matching = this.result;
                 if (matching) {
                     console.log("Returning matched cert in DB");
@@ -51,17 +81,28 @@
                     Ipseorama.createCert(app, doneCB);
                 }
             };
+            request.oncomplete = function(ev){
+                  console.log("Search for cert in DB - complete");
+                  console.log("ev "+JSON.stringify(ev));
+            };
+            request.onerror = function(event) {
+                  console.log("Get failed"+JSON.stringify(event));
+            };
         },
         findOrCreateCertAndDB: function(app, doneCB) {
             if (Ipseorama.db == null) {
-                var request = indexedDB.open("IpseCert",4);
-                request.onupgradeneeded = function() {
-                    var db = request.result;
+                var request = indexedDB.open("ipseorama");
+                request.onupgradeneeded = function(ev) {
                     console.log("Indexdb.open() needed upgrade...");
+                    console.log("ev "+JSON.stringify(ev));
 
-                    // The database did not previously exist, so create object stores and indexes. var db = request.result;
-                    var store = db.createObjectStore("IpseCert", {keyPath: "app"});
-                    var appIndex = store.createIndex("by_app", "app");
+                    var db = ev.target.result;
+                    if (ev.oldVersion < 1) {
+                        console.log("createObjectStore and  createIndex for new database ");
+                        // The database did not previously exist, so create object stores and indexes. var db = request.result;
+                        var store = db.createObjectStore("IpseCert", {keyPath: "app"});
+                        var appIndex = store.createIndex("by_app", "app");
+                    }
                 };
                 request.onsuccess = function() {
                     console.log("Indexdb.open() ok");
@@ -71,12 +112,17 @@
                 request.onerror = function(event) {
                     console.log("Indexdb.open() error is "+event.target.error.message);
                 };
+                request.onblocked = function(event) {
+                  // If some other tab is loaded with the database, then it needs to be closed
+                  // before we can proceed.
+                    console.log("Indexdb.open() open blocked.");
+                };
             } else {
                 Ipseorama.findOrCreateCert(app, doneCB);
             }
         },
         addMyCertToPeerConf: function(peerconf, mkpc) {
-            Ipseorama.findOrCreateCertAndDB("test",
+            Ipseorama.findOrCreateCertAndDB("me",
                     function(cert) {
                         console.log("got cert" + cert);
                         peerconf.certificates = [cert];
