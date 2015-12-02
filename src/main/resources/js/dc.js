@@ -167,7 +167,10 @@ function IpseDataChannel(finger) {
     }
     var configuration = {
         "iceServers": [
-            {url: "stun:stun.l.google.com:19302"}//,
+            {url: "stun:stun.l.google.com:19302"},
+            {url: "turn:146.148.121.175:3478?transport=udp",'credential': 'charliebrown','username': 'owner'},
+            {url: "turn:146.148.121.175:3478?transport=tcp",'credential': 'charliebrown','username': 'owner'},
+            {url: "turn:146.148.121.175:443?transport=tls",'credential': 'charliebrown','username': 'owner'}
         ]
     };
     if (typeof webkitRTCPeerConnection == "function") {
