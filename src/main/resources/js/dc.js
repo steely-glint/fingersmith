@@ -210,7 +210,9 @@ IpseDataChannel.prototype.sendCandy = function (cand){
         "candidate": can_j,
         "session": this.session,
         "from": this.myFinger,
-        "sdpMLineIndex":cand.sdpMLineIndex
+        "sdpMLineIndex":cand.sdpMLineIndex,
+        "nonsense": nonsense
+
     };
     console.log("send <- " + JSON.stringify(candy))
 
