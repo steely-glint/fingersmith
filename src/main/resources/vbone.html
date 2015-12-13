@@ -8,11 +8,14 @@
     <script src="js/dc.js"></script>
     <script src="js/LazarQr.min.js"></script>
     <script src="js/adapter.js"></script>
+    <script src="js/gauge.js"></script>
     <script type="text/javascript">
   var myFinger = undefined;
   var ipsed = null;
   var chout;
   var nonceS;
+  var battery;
+
   var sha256 =  require("js/sha256");
   function gotFinger(finger){
     myFinger = finger;
@@ -22,12 +25,10 @@
     askforCam();
   }
   function onDcMessage(evt){
-      var mess = evt.data;
-      var ts = mess.split(" ")[0];
-      var diff = Date.now() - parseInt(ts);
-      console.log("got dc message after : " + diff);
-
-      $('#responseText').val(evt.data)
+     var mess = evt.data;
+     var dv = mess.split(" ")[1];
+     var v=   parseInt(dv)* 1.0;
+     battery.setValue(v);
   }
   function onNewDc(channel){
       console.log("New DC ")
@@ -50,16 +51,34 @@
             console.log("sending " + mess);
             channel.send(mess);
             i++;
-        }, 10000);
+        }, 3000);
     };
+
     channel.onmessage = onDcMessage;
     chout = channel;
   }
-  function chsend(){
-	  var mess = $('#message').text()
-          chout.send(mess);
-  }
+    function makeGauge(id,min,max,unit,title,ticks,format,zero,high){
+    var opts = {
+        renderTo: id,
+        width :300,
+        height :300,
+        title : title,
+        minValue : min,
+        maxValue :max,
+        value:zero,
+        majorTicks :ticks,
+        animation : false,
+        //highlights: high,
+    //minorTicks - {Integer} - number of minor ticks to draw between major ticks on a gauge bar. Default is 10.
+    //strokeTicks - {Boolean} - the flag which identifies if the ticks bar should be stroked or not. By default is true.
+        units : unit,
+        valueFormat:  format // { int : 4, dec : 0 }
+    };
+    var gauge = new Gauge(opts); // create sexy gauge!
+    gauge.draw();
 
+    return gauge;
+  }
 
             function startQrDecode() {
                 var video = document.getElementById('gumVideo');
@@ -141,6 +160,8 @@
               Ipseorama.whoAmI(gotFinger,function(err) {
                 console.log("could not create identity " + err)
                 });
+              var bhigh = [{ from: 0.0, to: 500.0, color: '#e00' }, { from: 510.0, to: 1000.0, color: '#ccc' }, { from: 1100.0, to: 1800.0, color: '#0a0' }];
+              battery = makeGauge("Voltage",0.0,1800.0,"mV","Sensor",[250.0,500.0,750.0,1000.0,1250.0,1500.0,1750.0],{ int : 4, dec : 0 },1000.0,bhigh );
             });
 </script>
 <h1>Fingersmith test page</h1>
@@ -151,15 +172,16 @@
         <video style="display:none;" width="320" height="240" id="gumVideo" autoplay="autoplay"/>
     </div>
 <form onsubmit="return false;">
-  <input type="text" name="to" id="tofinger" value="Unknown"/>
+  <input type="text" name="to" id="tofinger" value="2D078882CFAC8A74D56B152A162CAE2F196D2AAC7BC90300DB0180031FC56E11"/>
   <input type="button" value="connect" onclick="makedc();" />
 </form>
 <form onsubmit="return false;">
   <input type="text" name="message" value="Hello, World!"/>
   <input type="button" value="send" onclick="chsend()" />
   <h3>Output</h3>
-  <textarea id="responseText" style="width: 500px; height:300px;"></textarea>
-
+    <div id="gaugeContainer">
+        <canvas class="gauge" id="Voltage"></canvas>
+    </div>
 </form>
 </body>
 </html>

@@ -114,6 +114,10 @@ object FingerSmithApp extends Logger {
         // Return HTML page to establish web socket
         staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"bone.html")
       }
+      case GET(Path("/vbone.html")) => {
+        // Return HTML page to establish web socket
+        staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"vbone.html")
+      }
       case GET(Path("/brick.html")) => {
         // Return HTML page to establish web socket
         staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"brick.html")
