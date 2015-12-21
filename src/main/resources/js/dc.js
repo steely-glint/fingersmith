@@ -10,11 +10,13 @@ function IpseDataChannel(finger) {
     this.candyStash = [];
     var configuration = {
         "iceServers": [
-            {url: "stun:stun.l.google.com:19302"},
-            {url: "turn:146.148.121.175:3478?transport=udp", 'credential': 'nexus5x', 'username': 'smartphone'},
-            {url: "turn:146.148.121.175:3478?transport=tcp", 'credential': 'nexus5x', 'username': 'smartphone'},
+            {urls: "stun:146.148.121.175:3478"},
+            {urls: "turn:146.148.121.175:3478?transport=udp", 'credential': 'nexus5x', 'username': 'smartphone'},
+            //{url: "turn:146.148.121.175:3478?transport=tcp", 'credential': 'nexus5x', 'username': 'smartphone'},
             {url: "turn:146.148.121.175:443?transport=tcp", 'credential': 'nexus5x', 'username': 'smartphone'}
-        ]
+        ],
+        //"iceTransportPolicy": "relay",
+        //"bundlePolicy":"max-bundle"
     };
     if (typeof webkitRTCPeerConnection == "function") {
         var pc = new webkitRTCPeerConnection(configuration, null);

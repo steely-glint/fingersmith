@@ -115,7 +115,10 @@
                 candidate["username"] = params[index + 1];
             if (params[index] == "password")
                 candidate["password"] = params[index + 1];
-
+            if (params[index] == "raddr")
+                candidate["raddr"] = params[index + 1];
+            if (params[index] == "rport")
+                candidate["rport"] = params[index + 1];
             index += 2;
         }
 
@@ -213,7 +216,7 @@
 
     _buildCandidate = function(candidateObj, iceObj) {
         var c = candidateObj;
-        var sdp = "a=candidate:" + c.foundation + " " +
+        var sdp = "candidate:" + c.foundation + " " +
                 c.component + " " +
                 c.protocol.toUpperCase() + " " +
                 c.priority + " " +
@@ -239,11 +242,13 @@
                 sdp = sdp + " username " + iceObj.ufrag;
             if (iceObj.pwd)
                 sdp = sdp + " password " + iceObj.pwd;
-        } else {
-            sdp = sdp + " username root password mysecret";// I know a secret
         }
         if (c.generation)
             sdp = sdp + " generation " + c.generation;
+        if (c.raddr)
+            sdp = sdp + " raddr "+ c.raddr;
+        if (c.rport)
+            sdp = sdp + " rport "+c.rport;
         sdp = sdp + "\r\n";
         return sdp;
     }
@@ -321,7 +326,7 @@
 
         var ci = 0;
         while (ci + 1 <= sdpObj.candidates.length) {
-            sdp = sdp + _buildCandidate(sdpObj.candidates[ci], sdpObj.ice);
+            sdp = sdp + "a="+_buildCandidate(sdpObj.candidates[ci], sdpObj.ice);
             ci = ci + 1;
         }
 
