@@ -32,18 +32,8 @@
   function onNewDc(channel){
       console.log("New DC ")
       channel.onmessage = onDcMessage;
-  }
-  function makedc(){
-    var tofinger = $('#tofinger').val();
-    console.log("setting toFinger"+tofinger);
-
-    ipsed.setTo(tofinger);
-    ipsed.setNonce(nonceS);
-    var channel = ipsed.createDataChannel("test",{});
-    channel.onopen = function() {
-        // e.g. enable send button
-        //enableChat(channel);
-        console.log("Outbound channel ");
+      channel.onopen = function() {
+        console.log("fresh channel "+JSON.stringify(channel));
         var i = 1;
         timer = setInterval(function() {
             var mess = ""+ Date.now();
@@ -52,6 +42,14 @@
             i++;
         }, 10000);
     };
+  }
+  function makedc(){
+    var tofinger = $('#tofinger').val();
+    console.log("setting toFinger"+tofinger);
+
+    ipsed.setTo(tofinger);
+    ipsed.setNonce(nonceS);
+    var channel = ipsed.createDataChannel("test",{});
     channel.onmessage = onDcMessage;
     chout = channel;
   }
