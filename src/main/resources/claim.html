@@ -1,0 +1,185 @@
+<html><head><title>Beaglebone voltage monitor</title></head>
+    <!--script src=""></script>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script-->
+    <script src="js/require.js"></script>
+    <script src="js/jquery-1.8.3.js"></script>
+    <script src="js/phono.sdp.js"></script>
+    <script src="js/ipseorama.js"></script>
+    <script src="js/dc.js"></script>
+    <script src="js/LazarQr.min.js"></script>
+    <script src="js/adapter.js"></script>
+    <script src="js/gauge.js"></script>
+    <script type="text/javascript">
+  var myFinger = undefined;
+  var ipsed = null;
+  var chout;
+  var nonceS;
+  var battery;
+
+  var sha256 =  require("js/sha256");
+  function gotFinger(finger){
+    myFinger = finger;
+    $('#myFinger').html(finger);
+    ipsed = new IpseDataChannel(finger);
+    ipsed.setOnDataChannel(onNewDc);
+    askforCam();
+  }
+  function onDcMessage(evt){
+     var mess = evt.data;
+     var dv = mess.split(" ")[1];
+     var v=   parseInt(dv)* 1.0;
+     battery.setValue(v);
+  }
+  function onNewDc(channel){
+      console.log("New DC ")
+      channel.onmessage = onDcMessage;
+  }
+  function makedc(){
+    var tofinger = $('#tofinger').val();
+    console.log("setting toFinger"+tofinger);
+
+    ipsed.setTo(tofinger);
+    ipsed.setNonce(nonceS);
+    var channel = ipsed.createDataChannel("test",{});
+    channel.onopen = function() {
+        // e.g. enable send button
+        //enableChat(channel);
+        console.log("Outbound channel ");
+        var i = 1;
+        timer = setInterval(function() {
+            var mess = ""+ Date.now();
+            console.log("sending " + mess);
+            channel.send(mess);
+            i++;
+        }, 3000);
+    };
+
+    channel.onmessage = onDcMessage;
+    chout = channel;
+  }
+    function makeGauge(id,min,max,unit,title,ticks,format,zero,high){
+    var opts = {
+        renderTo: id,
+        width :300,
+        height :300,
+        title : title,
+        minValue : min,
+        maxValue :max,
+        value:zero,
+        majorTicks :ticks,
+        animation : false,
+        //highlights: high,
+    //minorTicks - {Integer} - number of minor ticks to draw between major ticks on a gauge bar. Default is 10.
+    //strokeTicks - {Boolean} - the flag which identifies if the ticks bar should be stroked or not. By default is true.
+        units : unit,
+        valueFormat:  format // { int : 4, dec : 0 }
+    };
+    var gauge = new Gauge(opts); // create sexy gauge!
+    gauge.draw();
+
+    return gauge;
+  }
+
+            function startQrDecode() {
+                var video = document.getElementById('gumVideo');
+                var photo = document.getElementById('qr-canvas');
+                var context = photo.getContext('2d');
+                // set our canvas to the same size as our video
+
+                qrcode.callback = function(code) {
+                    console.log("got qrcode of " + code);
+                    clearInterval(tick);
+                    navigator.vibrate(50);
+                    var fparts = code.split(":");
+                    $('#tofinger').val(fparts[0]);
+                    nonceS = fparts[1];
+                    console.log("nonce = "+nonceS)
+                    $("#qr-canvas").remove();
+                    $("#gumVideo").css("display","block");
+                };
+                var tick = setInterval(function() {
+                    if ((video.videoWidth > 0) && (video.videoHeight > 0)) {
+                        var rat = video.height / video.videoHeight;
+                        photo.width = video.videoWidth * rat;
+                        photo.height = video.videoHeight * rat;
+                        console.log("set photo to " + photo.width + " x " + photo.height);
+                        console.log("rat was " + rat);
+                        context.drawImage(video, 0, 0, photo.width, photo.height);
+                        qrcode.decode();
+                    }
+                }, 250);
+            }
+            function startGum(sid) {
+                var constraints = {video: true, audio: false};
+                if (sid) {
+                    constraints.video = {optional: [{sourceId: sid}]};
+                }
+                navigator.getUserMedia(constraints,
+                        function(stream) {
+                            var url = window.URL || window.webkitURL;
+                            var v = document.getElementById('gumVideo');
+                            v.src = url ? url.createObjectURL(stream) : stream;
+                            v.play();
+                            startQrDecode();
+                        },
+                        function(error) {
+                            alert('Something went wrong. (error code ' + error.code + ')');
+                            location.href = "nogum.htm";
+                            return;
+                        }
+                );
+            }
+            function onSourcesAcquired(sources) {
+                var sid;
+                for (var i = 0; i != sources.length; ++i) {
+                    var source = sources[i];
+                    console.log(source);
+                    if ((source.kind == "video") && (source.facing == "environment")) {
+                        sid = source.id;
+                        //break;
+                    }
+                    // source.id -> DEVICE ID
+                    // source.label -> DEVICE NAME
+                    // source.kind = "audio" OR "video"
+                    // TODO: add this to some datastructure of yours or a selection dialog
+                }
+                startGum(sid);
+            }
+            function askforCam() {
+                console.log("starting QR reader");
+                //frontcam...
+                var sid;
+                if ((typeof MediaStreamTrack === 'undefined') || (typeof MediaStreamTrack.getSources == 'undefined')) {
+                    startGum(sid);
+                } else {
+                    MediaStreamTrack.getSources(onSourcesAcquired);
+                }
+            }
+
+            $( document ).ready(function() {
+              Ipseorama.whoAmI(gotFinger,function(err) {
+                console.log("could not create identity " + err)
+                });
+              var bhigh = [{ from: 0.0, to: 500.0, color: '#e00' }, { from: 510.0, to: 1000.0, color: '#ccc' }, { from: 1100.0, to: 1800.0, color: '#0a0' }];
+              battery = makeGauge("Voltage",0.0,1750.0,"mV","Sensor",[0.0,250.0,500.0,750.0,1000.0,1250.0,1500.0,1750.0],{ int : 4, dec : 0 },1000.0,bhigh );
+            });
+</script>
+<h1>Beaglebone voltage monitor</h1>
+<div> My Fingerprint is :
+<span id="myFinger">unknown</span> </div>
+    <div id="remoteVideoContainer" class="ui-video-remote-container">
+        <canvas width="320" height="240" id="qr-canvas"></canvas>
+        <video style="display:none;" width="320" height="240" id="gumVideo" autoplay="autoplay"/>
+    </div>
+<form onsubmit="return false;">
+  <input type="text" name="to" id="tofinger" value="2D078882CFAC8A74D56B152A162CAE2F196D2AAC7BC90300DB0180031FC56E11"/>
+  <input type="button" value="connect" onclick="makedc();" />
+</form>
+
+  <h3>Output</h3>
+    <div id="gaugeContainer">
+        <canvas class="gauge" id="Voltage"></canvas>
+    </div>
+
+</body>
+</html>
