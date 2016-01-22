@@ -130,6 +130,14 @@ object FingerSmithApp extends Logger {
         // Return HTML page to establish web socket
         staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"abrick.html")
       }
+            case GET(Path("/claim.html")) => {
+        // Return HTML page to establish web socket
+        staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"claim.html")
+      }
+      case GET(Path("/intro.html")) => {
+        // Return HTML page to establish web socket
+        staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"intro.html")
+      }
       case PathSegments("js" :: relativePath) => {
         // Serve the static js content from resources
         staticContentHandlerRouter ! new StaticResourceRequest(httpRequest, relativePath.mkString("js/", "/", ""))

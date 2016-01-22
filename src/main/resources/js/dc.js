@@ -176,6 +176,34 @@ IpseDataChannel.prototype.setTo = function (tof) {
     this.session = this.finger + "-" + tof + "-" + n; // fix this
     console.log("this.toFinger:" + this.toFinger);
 };
+IpseDataChannel.prototype.addRemote = function (tag) {
+    var that = this;
+    this.peerCon.getStats(function (res) {
+        res.result().forEach(function (result) {
+            console.log(">>>>type>>" + result.type);
+            console.log(">>>>id>>>>" + result.id);
+            if (result.type === "googCertificate") {
+                var print = result.stat("googFingerprint");
+                var fcert = result.stat("googDerBase64");
+                print = print.split(":").join("");
+                if (print === that.toFinger) {
+                    var printncert = {finger:print,cert:fcert,tag:tag};
+                    console.log("adding matching print+cert " + JSON.stringify(printncert));
+                    Ipseorama.dbAddPrint(printncert,function (){console.log("add print done.") })
+
+                } else {
+                    console.log("skipping print " + print+ " is not "+that.toFinger);
+                }
+
+            } else {
+                /*result.names().forEach(function (name) {
+                    console.log(name + " = " + result.stat(name))
+                });*/
+            }
+        });
+    });
+    console.log("this.toFinger:" + this.toFinger);
+};
 IpseDataChannel.prototype.setNonce = function (n) {
     this.nonceS = n;
 };
