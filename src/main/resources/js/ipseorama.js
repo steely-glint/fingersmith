@@ -157,9 +157,9 @@ if (!window.indexedDB) {
             };
         },
         dbListPrint: function (doneCB) {
-            Ipseorama.openDb(Ipseorama.listPrint, doneCB);
+            Ipseorama.openDb("friends", Ipseorama.listPrint, doneCB);
         },
-        listPrint: function (doneCB) {
+        listPrint: function (thing,doneCB) {
             var tx = Ipseorama.db.transaction("IpseFinger", "readonly");
             var store = tx.objectStore("IpseFinger");
             var prints = [];
@@ -169,7 +169,6 @@ if (!window.indexedDB) {
                     prints.push(cursor.value);
                     cursor.continue();
                 } else {
-                    alert("Got all customers: " + prints);
                     doneCB(prints);
                 }
             };
