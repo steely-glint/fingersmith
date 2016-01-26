@@ -78,13 +78,13 @@ object FingerSmithApp extends Logger {
 	    }
 	  }
 	}"""
-/*
-    ssl {
-       key-store-file=$keystore
-       key-store-password=$password
-    }
-    next to weblog
- */
+  /*
+   ssl {
+   key-store-file=$keystore
+   key-store-password=$password
+   }
+   next to weblog
+   */
   object MyWebServerConfig extends ExtensionId[WebServerConfig] with ExtensionIdProvider {
     override def lookup = MyWebServerConfig
     override def createExtension(system: ExtendedActorSystem) =
@@ -93,7 +93,7 @@ object FingerSmithApp extends Logger {
 
   val actorSystem = ActorSystem("FingersmithActorSystem", ConfigFactory.parseString(actorConfig))
   val staticContentHandlerRouter = actorSystem.actorOf(Props(new StaticContentHandler(StaticContentHandlerConfig()))
-    .withRouter(FromConfig()).withDispatcher("my-pinned-dispatcher"), "static-file-router")
+                                                       .withRouter(FromConfig()).withDispatcher("my-pinned-dispatcher"), "static-file-router")
   //
   // STEP #2 - Define Routes
   // Each route dispatches the request to a newly instanced `WebSocketHandler` actor for processing.
@@ -101,82 +101,90 @@ object FingerSmithApp extends Logger {
   //
   val routes = Routes({
 
-    case HttpRequest(httpRequest) => httpRequest match {
-      case GET(Path("/status")) => {
-        // Return HTML page to establish web socket
-        actorSystem.actorOf(Props[FingerSmithHandler]) ! httpRequest
-      }
-      case GET(Path("/index.html")) => {
-        // Return HTML page to establish web socket
-        staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"index.html")
-      }
-      case GET(Path("/bone.html")) => {
-        // Return HTML page to establish web socket
-        staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"bone.html")
-      }
-      case GET(Path("/vbone.html")) => {
-        // Return HTML page to establish web socket
-        staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"vbone.html")
-      }
-      case GET(Path("/tbone.html")) => {
-        // Return HTML page to establish web socket
-        staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"tbone.html")
-      }
-      case GET(Path("/brick.html")) => {
-        // Return HTML page to establish web socket
-        staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"brick.html")
-      }
-      case GET(Path("/abrick.html")) => {
-        // Return HTML page to establish web socket
-        staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"abrick.html")
-      }
-            case GET(Path("/claim.html")) => {
-        // Return HTML page to establish web socket
-        staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"claim.html")
-      }
-      case GET(Path("/intro.html")) => {
-        // Return HTML page to establish web socket
-        staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"intro.html")
-      }
-      case PathSegments("js" :: relativePath) => {
-        // Serve the static js content from resources
-        staticContentHandlerRouter ! new StaticResourceRequest(httpRequest, relativePath.mkString("js/", "/", ""))
-      }
-      case Path("/favicon.ico") => {
-        // If favicon.ico, just return a 404 because we don't have that file
-        httpRequest.response.write(HttpResponseStatus.NOT_FOUND)
-      }
-    }
+      case HttpRequest(httpRequest) => httpRequest match {
+          case GET(Path("/status")) => {
+              // Return HTML page to establish web socket
+              actorSystem.actorOf(Props[FingerSmithHandler]) ! httpRequest
+            }
+          case GET(Path("/index.html")) => {
+              // Return HTML page to establish web socket
+              staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"index.html")
+            }
+          case GET(Path("/bone.html")) => {
+              // Return HTML page to establish web socket
+              staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"bone.html")
+            }
+          case GET(Path("/vbone.html")) => {
+              // Return HTML page to establish web socket
+              staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"vbone.html")
+            }
+          case GET(Path("/tbone.html")) => {
+              // Return HTML page to establish web socket
+              staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"tbone.html")
+            }
+          case GET(Path("/brick.html")) => {
+              // Return HTML page to establish web socket
+              staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"brick.html")
+            }
+          case GET(Path("/abrick.html")) => {
+              // Return HTML page to establish web socket
+              staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"abrick.html")
+            }
+          case GET(Path("/share.html")) => {
+              // Return HTML page to establish web socket
+              staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"share.html")
+            }
+          case GET(Path("/claim.html")) => {
+              // Return HTML page to establish web socket
+              staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"claim.html")
+            }
+          case GET(Path("/delete.html")) => {
+              // Return HTML page to establish web socket
+              staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"delete.html")
+            }
+          case GET(Path("/intro.html")) => {
+              // Return HTML page to establish web socket
+              staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"intro.html")
+            }
+          case PathSegments("js" :: relativePath) => {
+              // Serve the static js content from resources
+              staticContentHandlerRouter ! new StaticResourceRequest(httpRequest, relativePath.mkString("js/", "/", ""))
+            }
+          case Path("/favicon.ico") => {
+              // If favicon.ico, just return a 404 because we don't have that file
+              httpRequest.response.write(HttpResponseStatus.NOT_FOUND)
+            }
+        }
 
-    case WebSocketHandshake(wsHandshake) => wsHandshake match {
-      case Path("/websocket/") => {
-        // To start Web Socket processing, we first have to authorize the handshake.
-        // This is a security measure to make sure that web sockets can only be established at your specified end points.
-        wsHandshake.authorize(
-          onComplete = Some(onWebSocketHandshakeComplete),
-          onClose = Some(onWebSocketClose))
-      }
-    }
+      case WebSocketHandshake(wsHandshake) => wsHandshake match {
+          case Path("/websocket/") => {
+              // To start Web Socket processing, we first have to authorize the handshake.
+              // This is a security measure to make sure that web sockets can only be established at your specified end points.
+              wsHandshake.authorize(
+                onComplete = Some(onWebSocketHandshakeComplete),
+                onClose = Some(onWebSocketClose))
+            }
+        }
 
-    case WebSocketFrame(wsFrame) => {
-      // Once handshaking has taken place, we can now process frames sent from the client
-      actorSystem.actorOf(Props[FingerSmithHandler]) ! wsFrame
-    }
+      case WebSocketFrame(wsFrame) => {
+          // Once handshaking has taken place, we can now process frames sent from the client
+          actorSystem.actorOf(Props[FingerSmithHandler]) ! wsFrame
+        }
 
-  })
+    })
   val myWebServerConfig = MyWebServerConfig(actorSystem)
   //val myWebServerConfig = new WebServerConfig();
   val webServer = new WebServer(myWebServerConfig, routes,actorSystem)
- // webServer.start()
- // val webServer = new WebServer(WebServerConfig("FingerSmith", "0.0.0.0", 8888), routes, actorSystem)
+  // webServer.start()
+  // val webServer = new WebServer(WebServerConfig("FingerSmith", "0.0.0.0", 8888), routes, actorSystem)
 
   //
   // STEP #3 - Start and Stop Socko Web Server
   //
   def main(args: Array[String]) {
     Runtime.getRuntime.addShutdownHook(new Thread {
-      override def run { webServer.stop() }
-    })
+        override def run { webServer.stop() }
+      })
     webServer.start()
 
     System.out.println("Open a browsers and navigate to http://localhost:8888/index.html.")

@@ -1,0 +1,100 @@
+<html><head><title>Introduce one device to a target device</title></head>
+    <!--script src=""></script>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script-->
+    <script src="js/require.js"></script>
+    <script src="js/jquery-1.8.3.js"></script>
+    <script src="js/phono.sdp.js"></script>
+    <script src="js/ipseorama.js"></script>
+    <script src="js/dc.js"></script>
+    <script src="js/LazarQr.min.js"></script>
+    <script src="js/adapter.js"></script>
+    <script src="js/gauge.js"></script>
+    <script type="text/javascript">
+        var myFinger = undefined;
+        var ipsed = null;
+        var chout = null;
+        var friendList = [];
+        var nonceS = "";
+
+        var sha256 = require("js/sha256");
+        function setFriend(fing) {
+            if (chout != null) {
+                var pickedFriend = $('#tofinger').val();
+                console.log("introing " + fing + " to " + pickedFriend);
+                var cert = friendList[fing].cert;
+                var mess = {id: fing, action: "introduce", cert: cert};
+                chout.send(JSON.stringify(mess));
+            } else {
+                $('#tofinger').val(fing);
+            }
+        }
+        function showFriends(friends) {
+            if (chout != null) {
+                $('#actbut').val("introduce");
+            } else {
+                $('#actbut').val("target");
+            }
+            var pickedFriend = $('#tofinger').val();
+            var pics = "<ol>";
+            friends.forEach(function(fr) {
+                friendList[fr.finger] = fr;
+                if (pickedFriend != fr.finger) {
+                    pics += "<li><img src='" + fr.tag + "' onclick=\"setFriend('" + fr.finger + "');\"></li>";
+                }
+            });
+            pics += "</ol>";
+            $('#friendList').html(pics);
+        }
+        function gotFinger(finger) {
+            myFinger = finger;
+            $('#myFinger').html(finger);
+            ipsed = new IpseDataChannel(finger);
+            ipsed.setOnDataChannel(onNewDc);
+            Ipseorama.dbListPrint(showFriends);
+        }
+        function onDcMessage(evt) {
+            var mess = evt.data;
+            var jval = JSON.parse(mess);
+            $('#status').html(jval.status);
+        }
+        function onNewDc(channel) {
+            console.log("New DC ")
+            channel.onmessage = onDcMessage;
+        }
+        function makedc() {
+            var tofinger = $('#tofinger').val();
+            console.log("setting toFinger" + tofinger);
+
+            ipsed.setTo(tofinger);
+            ipsed.setNonce(nonceS);
+            chout = ipsed.createDataChannel("cert", {});
+            chout.onopen = function() {
+                Ipseorama.dbListPrint(showFriends);
+            };
+            channel.onmessage = onDcMessage;
+            chout = channel;
+        }
+
+
+        $(document).ready(function() {
+            Ipseorama.whoAmI(gotFinger, function(err) {
+                console.log("could not create identity " + err);
+            });
+
+        });
+    </script>
+    <h1>YoPet intro</h1>
+    <div> My Fingerprint is :
+        <span id="myFinger">unknown</span> </div>
+    <div id="friendList">
+
+    </div>
+    <form onsubmit="return false;">
+        <input type="text" name="to" id="tofinger" value=""/>
+        <input id="actbut" type="button" value="connect" onclick="makedc();" />
+    </form>
+    <div id="status"></div>
+
+
+</body>
+</html>

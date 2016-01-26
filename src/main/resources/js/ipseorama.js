@@ -10,63 +10,63 @@ if (!window.indexedDB) {
     window.alert("Your browser doesn't support a stable version of IndexedDB. Persistent certs feature will not be available.");
 }
 
-(function () {
+(function() {
     Ipseorama = {
         db: null,
-        cleanDb: function (app, doneCB) {
+        cleanDb: function(app, doneCB) {
             var request = indexedDB.deleteDatabase("ipseorama");
-            request.onsuccess = function () {
+            request.onsuccess = function() {
                 console.log("Indexdb.deleteDatabase() ok");
             };
-            request.onerror = function (event) {
+            request.onerror = function(event) {
                 console.log("Indexdb.deleteDatabase() error is " + event.target.error.message);
             };
-            request.onblocked = function (event) {
+            request.onblocked = function(event) {
                 console.log("Indexdb.deleteDatabase() blocked.");
             };
         },
-        dbDone: function () {
+        dbDone: function() {
             if (Ipseorama.db != null) {
                 console.log("close db");
                 Ipseorama.db.close();
                 Ipseorama.db = null;
             }
         },
-        createCert: function (app, doneCB) {
+        createCert: function(app, doneCB) {
             console.log("create a new cert");
             var creq = mozRTCPeerConnection.generateCertificate({name: "ECDSA", namedCurve: "P-256"})
 //            var creq =mozRTCPeerConnection.generateCertificate({ name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" , expires: 365*24*60*60*1000*1000 });
-            creq.then(function (cert) {
+            creq.then(function(cert) {
                 console.log("created a new cert, now store it.");
                 var tx = Ipseorama.db.transaction("IpseCert", "readwrite");
-                tx.oncomplete = function () {
+                tx.oncomplete = function() {
                     Ipseorama.dbDone();
                     doneCB(cert);
                     console.log("transaction done .");
                 };
-                tx.onerror = function (event) {
+                tx.onerror = function(event) {
                     console.log("transaction error is " + event.target.error.message);
                 };
                 var store = tx.objectStore("IpseCert");
                 var updateRequest = store.put({app: app, cert: cert, timestamp: Date.now()});
-                updateRequest.onsuccess = function () {
+                updateRequest.onsuccess = function() {
                     console.log("cert stored.");
                 };
-                updateRequest.onerror = function (event) {
+                updateRequest.onerror = function(event) {
                     console.log("update error is " + event.target.error.message);
                 };
 
             }
             );
         },
-        findOrCreateCert: function (app, doneCB) {
+        findOrCreateCert: function(app, doneCB) {
             var tx = Ipseorama.db.transaction("IpseCert", "readonly");
             var store = tx.objectStore("IpseCert");
             var index = store.index("by_app");
             console.log("Looking for cert in Indexdb");
 
             var request = index.get(app);
-            request.onsuccess = function (ev) {
+            request.onsuccess = function(ev) {
                 console.log("ev " + JSON.stringify(ev));
                 console.log("request " + JSON.stringify(request));
                 console.log("this " + JSON.stringify(this));
@@ -80,43 +80,67 @@ if (!window.indexedDB) {
                     Ipseorama.createCert(app, doneCB);
                 }
             };
-            request.oncomplete = function (ev) {
+            request.oncomplete = function(ev) {
+                Ipseorama.dbDone();
                 console.log("Search for cert in DB - complete");
                 console.log("ev " + JSON.stringify(ev));
             };
-            request.onerror = function (event) {
+            request.onerror = function(event) {
                 console.log("Get failed" + JSON.stringify(event));
             };
         },
-        dbAddPrint: function (print, doneCB) {
-            Ipseorama.openDb(print, Ipseorama.addPrint, doneCB);
+        dbDelPrint: function(print, doneCB) {
+            Ipseorama.openDb(print, Ipseorama.delPrint, doneCB);
         },
-        addPrint: function (print, doneCB) {
-            console.log("Adding a new print ");
+        delPrint: function(print, doneCB) {
+            console.log("delete existing print ");
             var tx = Ipseorama.db.transaction("IpseFinger", "readwrite");
-            tx.oncomplete = function () {
+            tx.oncomplete = function() {
                 Ipseorama.dbDone();
                 doneCB(print);
                 console.log("transaction done .");
             };
-            tx.onerror = function (event) {
+            tx.onerror = function(event) {
+                console.log("transaction error is " + event.target.error.message);
+            };
+            var store = tx.objectStore("IpseFinger");
+            var updateRequest = store.delete(print);
+            updateRequest.onsuccess = function() {
+                console.log("print deleted.");
+            };
+            updateRequest.onerror = function(event) {
+                console.log("print delete error is " + event.target.error.message);
+            };
+        },
+        dbAddPrint: function(print, doneCB) {
+            Ipseorama.openDb(print, Ipseorama.addPrint, doneCB);
+        },
+        addPrint: function(print, doneCB) {
+            console.log("Adding a new print ");
+            var tx = Ipseorama.db.transaction("IpseFinger", "readwrite");
+            tx.oncomplete = function() {
+                Ipseorama.dbDone();
+                doneCB(print);
+                console.log("transaction done .");
+            };
+            tx.onerror = function(event) {
                 console.log("transaction error is " + event.target.error.message);
             };
             var store = tx.objectStore("IpseFinger");
             print.timestamp = Date.now();
             var updateRequest = store.put(print);
-            updateRequest.onsuccess = function () {
+            updateRequest.onsuccess = function() {
                 console.log("print stored.");
             };
-            updateRequest.onerror = function (event) {
+            updateRequest.onerror = function(event) {
                 console.log("print insert error is " + event.target.error.message);
             };
         },
-        dbIfMaster: function (print, doneCB) {
+        dbIfMaster: function(print, doneCB) {
             Ipseorama.openDb(print, Ipseorama.ifMaster, doneCB);
         },
-        ifMaster: function (finger, doneCB) {
-            var checkMaster = function (data) {
+        ifMaster: function(finger, doneCB) {
+            var checkMaster = function(data) {
                 if (data.alias === "master") {
                     doneCB()
                 } else {
@@ -125,17 +149,17 @@ if (!window.indexedDB) {
             };
             Ipseorama.findPrint(finger, checkMaster)
         },
-        dbFindPrint: function (print, doneCB) {
+        dbFindPrint: function(print, doneCB) {
             Ipseorama.openDb(print, Ipseorama.findPrint, doneCB);
         },
-        findPrint: function (finger, doneCB) {
+        findPrint: function(finger, doneCB) {
             var tx = Ipseorama.db.transaction("IpseFinger", "readonly");
             var store = tx.objectStore("IpseFinger");
             var index = store.index("by_finger");
             console.log("Looking for finger in Indexdb");
 
             var request = index.get(finger);
-            request.onsuccess = function (ev) {
+            request.onsuccess = function(ev) {
                 console.log("ev " + JSON.stringify(ev));
                 console.log("request " + JSON.stringify(request));
                 console.log("this " + JSON.stringify(this));
@@ -148,35 +172,41 @@ if (!window.indexedDB) {
                     doneCB(null);
                 }
             };
-            request.oncomplete = function (ev) {
+            request.oncomplete = function(ev) {
+                Ipseorama.dbDone();
                 console.log("Search for print in DB - complete");
                 console.log("ev " + JSON.stringify(ev));
             };
-            request.onerror = function (event) {
+            request.onerror = function(event) {
                 console.log("Get failed" + JSON.stringify(event));
             };
         },
-        dbListPrint: function (doneCB) {
+        dbListPrint: function(doneCB) {
             Ipseorama.openDb("friends", Ipseorama.listPrint, doneCB);
         },
-        listPrint: function (thing,doneCB) {
-            var tx = Ipseorama.db.transaction("IpseFinger", "readonly");
-            var store = tx.objectStore("IpseFinger");
+        listPrint: function(thing, doneCB) {
             var prints = [];
-            store.openCursor().onsuccess = function (event) {
+
+            var tx = Ipseorama.db.transaction("IpseFinger", "readonly");
+            tx.oncomplete = function() {
+                Ipseorama.dbDone();
+                console.log("transaction done .");
+                doneCB(prints);
+            };
+            var store = tx.objectStore("IpseFinger");
+
+            store.openCursor().onsuccess = function(event) {
                 var cursor = event.target.result;
                 if (cursor) {
                     prints.push(cursor.value);
                     cursor.continue();
-                } else {
-                    doneCB(prints);
                 }
             };
         },
-        openDb: function (app, action, doneCB) {
+        openDb: function(app, action, doneCB) {
             if (Ipseorama.db == null) {
                 var request = indexedDB.open("ipseorama");
-                request.onupgradeneeded = function (ev) {
+                request.onupgradeneeded = function(ev) {
                     console.log("Indexdb.open() needed upgrade...");
                     console.log("ev " + JSON.stringify(ev));
 
@@ -190,15 +220,15 @@ if (!window.indexedDB) {
                         var fappIndex = fstore.createIndex("by_finger", "finger");
                     }
                 };
-                request.onsuccess = function () {
+                request.onsuccess = function() {
                     console.log("Indexdb.open() ok");
                     Ipseorama.db = request.result;
                     action(app, doneCB);
                 };
-                request.onerror = function (event) {
+                request.onerror = function(event) {
                     console.log("Indexdb.open() error is " + event.target.error.message);
                 };
-                request.onblocked = function (event) {
+                request.onblocked = function(event) {
                     // If some other tab is loaded with the database, then it needs to be closed
                     // before we can proceed.
                     console.log("Indexdb.open() open blocked.");
@@ -207,19 +237,19 @@ if (!window.indexedDB) {
                 action(app, doneCB);
             }
         },
-        findOrCreateCertAndDB: function (app, doneCB) {
+        findOrCreateCertAndDB: function(app, doneCB) {
             Ipseorama.openDb(app, Ipseorama.findOrCreateCert, doneCB);
         },
-        addMyCertToPeerConf: function (peerconf, mkpc) {
+        addMyCertToPeerConf: function(peerconf, mkpc) {
             Ipseorama.findOrCreateCertAndDB("me",
-                    function (cert) {
+                    function(cert) {
                         console.log("got cert" + cert);
                         peerconf.certificates = [cert];
                         mkpc();
                     }
             );
         },
-        getFinger: function (descsdp) {
+        getFinger: function(descsdp) {
             var sdp = Phono.sdp.parseSDP(descsdp)
             var myfp = JSON.stringify(sdp.contents[0].fingerprint.print);
             myfp = myfp.split(":").join("");
@@ -227,16 +257,16 @@ if (!window.indexedDB) {
             console.log("fingerprint is " + myfp)
             return myfp;
         },
-        whoAmI: function (okCB, failCB) {
+        whoAmI: function(okCB, failCB) {
             var peerconfig = {"iceServers": [{url: "stun:stun.l.google.com:19302"}]};
-            var offerCreated = function (localDesc) {
+            var offerCreated = function(localDesc) {
                 var myfp = Ipseorama.getFinger(localDesc.sdp)
                 okCB(myfp);
             }
-            var withPc = function (pc) {
+            var withPc = function(pc) {
                 pc.createDataChannel('channel', {});
                 pc.createOffer(offerCreated,
-                        function (e) {
+                        function(e) {
                             failCB("Couldn't creat offer")
                         }
                 /*,{mandatory: {
@@ -246,7 +276,7 @@ if (!window.indexedDB) {
             }
             if (typeof webkitRTCPeerConnection == "function") {
                 if (typeof webkitRTCPeerConnection.generateCertificate == "function") {
-                    Ipseorama.addMyCertToPeerConf(peerconfig, function () {
+                    Ipseorama.addMyCertToPeerConf(peerconfig, function() {
                         var wcpc = new webkitRTCPeerConnection(peerconfig, null)
                         withPc(wcpc);
                     });
@@ -256,10 +286,11 @@ if (!window.indexedDB) {
                     withPc(wcpc);
                 }
             } else if (typeof mozRTCPeerConnection == "function") {
+                var todo = withPc;
                 if (typeof mozRTCPeerConnection.generateCertificate == "function") {
-                    Ipseorama.addMyCertToPeerConf(peerconfig, function () {
+                    Ipseorama.addMyCertToPeerConf(peerconfig, function() {
                         var mozpc = new mozRTCPeerConnection(peerconfig, null);
-                        withPc(mozpc);
+                        todo(mozpc);
                     });
                 }
             }
