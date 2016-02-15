@@ -11,6 +11,7 @@ if (!window.indexedDB) {
 
 (function() {
     Ipseorama = {
+        chromeVersionThatStoresCerts: 100, // sooner hopefully
         db: null,
         cleanDb: function(app, doneCB) {
             var request = indexedDB.deleteDatabase("ipseorama");
@@ -273,13 +274,13 @@ if (!window.indexedDB) {
                  }}*/);
             }
             if (typeof webkitRTCPeerConnection == "function") {
-                if (typeof webkitRTCPeerConnection.generateCertificate == "function") {
+                if (window.webrtcDetectedVersion >= Ipseorama.chromeVersionThatStoresCerts ) {
                     Ipseorama.addMyCertToPeerConf(peerconfig, function() {
                         var wcpc = new webkitRTCPeerConnection(peerconfig, null)
                         withPc(wcpc);
                     });
                 } else {
-                    console.log("No cert generation available ?");
+                    console.log("No cert generation+storage available ?");
                     var wcpc = new webkitRTCPeerConnection(peerconfig, null);
                     withPc(wcpc);
                 }

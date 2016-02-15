@@ -18,19 +18,28 @@ function IpseDataChannel(finger) {
         //"iceTransportPolicy": "relay",
         //"bundlePolicy":"max-bundle"
     };
+
     if (typeof webkitRTCPeerConnection == "function") {
-        var pc = new webkitRTCPeerConnection(configuration, null);
-        this.withPc(pc);
+        if (window.webrtcDetectedVersion >= Ipseorama.chromeVersionThatStoresCerts ) {
+            var that = this;
+            Ipseorama.addMyCertToPeerConf(peerconfig, function () {
+                var wcpc = new webkitRTCPeerConnection(peerconfig, null)
+                that.withPc(wcpc);
+            });
+        } else {
+            var pc = new webkitRTCPeerConnection(configuration, null);
+            this.withPc(pc);
+        }
     } else if (typeof mozRTCPeerConnection == "function") {
         var that = this;
-        Ipseorama.addMyCertToPeerConf(configuration, function() {
+        Ipseorama.addMyCertToPeerConf(configuration, function () {
             var mozpc = new mozRTCPeerConnection(configuration, null)
             that.withPc(mozpc);
         });
     }
 }
 
-IpseDataChannel.prototype.makeWs = function() {
+IpseDataChannel.prototype.makeWs = function () {
     if (!window.WebSocket) {
         window.WebSocket = window.MozWebSocket;
     }
@@ -52,14 +61,14 @@ IpseDataChannel.prototype.makeWs = function() {
     socket = new WebSocket(protocol + "//" + host + "/websocket/?finger=" + this.myFinger);
     session = "new"; // fix this
 
-    socket.onopen = function(event) {
+    socket.onopen = function (event) {
         console.log("wsopen " + JSON.stringify(event));
     };
-    socket.onclose = function(event) {
+    socket.onclose = function (event) {
         console.log("wsclose " + JSON.stringify(event));
         ws = null;
     };
-    socket.onmessage = function(event) {
+    socket.onmessage = function (event) {
         console.log("message is " + event.data);
 
         var data = JSON.parse(event.data);
@@ -92,7 +101,7 @@ IpseDataChannel.prototype.makeWs = function() {
                     rtcd = new RTCSessionDescription(message);
                 }
                 console.log("rtcd is " + rtcd);
-                pc.setRemoteDescription(rtcd, function() {
+                pc.setRemoteDescription(rtcd, function () {
                     console.log("set " + data.type + " ok");
                     if (data.type == 'offer') {
                         var theirfp = JSON.stringify(data.sdp.contents[0].fingerprint.print);
@@ -100,18 +109,18 @@ IpseDataChannel.prototype.makeWs = function() {
                         theirfp = theirfp.split('"').join("");
                         console.log("their fingerprint is " + theirfp)
                         that.setTo(theirfp);
-                        pc.createAnswer(function(desc) {
-                            pc.setLocalDescription(desc, function() {
+                        pc.createAnswer(function (desc) {
+                            pc.setLocalDescription(desc, function () {
                                 console.log("Set Local description");
                                 that.sendSDP(pc);
-                            }, function(e) {
+                            }, function (e) {
                                 console.log("Set Local description error " + e);
                             });
-                        }, function(e) {
+                        }, function (e) {
                             console.log("Create answer error " + e);
                         });
                     }
-                }, function(e) {
+                }, function (e) {
                     console.log("Set Remote description error " + e);
                 });
             }
@@ -121,14 +130,14 @@ IpseDataChannel.prototype.makeWs = function() {
     };
     return socket;
 };
-IpseDataChannel.prototype.logError = function(error) {
+IpseDataChannel.prototype.logError = function (error) {
     console.log(error.name + ": " + error.message);
 };
 
-IpseDataChannel.prototype.withPc = function(pc) {
+IpseDataChannel.prototype.withPc = function (pc) {
 // send everything to the peer - via fingersmith
     var that = this;
-    pc.onicecandidate = function(evt) {
+    pc.onicecandidate = function (evt) {
         if (evt.candidate != null) {
             if (pc.signalingState == 'stable') {
                 that.sendCandy(evt.candidate);
@@ -138,16 +147,16 @@ IpseDataChannel.prototype.withPc = function(pc) {
         }
     };
     // let the "negotiationneeded" event trigger offer generation
-    pc.onnegotiationneeded = function() {
+    pc.onnegotiationneeded = function () {
         var sdpConstraints = {'mandatory': {'OfferToReceiveAudio': false, 'OfferToReceiveVideo': false}}
-        pc.createOffer(function(desc) {
-            pc.setLocalDescription(desc, function() {
+        pc.createOffer(function (desc) {
+            pc.setLocalDescription(desc, function () {
                 console.log("Set Local description");
                 that.sendSDP(pc);
             }, that.logError);
         }, that.logError, sdpConstraints);
     }
-    pc.onsignalingstatechange = function(evt) {
+    pc.onsignalingstatechange = function (evt) {
         console.log("signalling state is " + pc.signalingState);
         if (pc.signalingState == 'stable') {
             var can;
@@ -158,7 +167,7 @@ IpseDataChannel.prototype.withPc = function(pc) {
         }
     };
     this.peerCon = pc;
-    pc.ondatachannel = function(evt) {
+    pc.ondatachannel = function (evt) {
         if (that.ondatachannel) {
             that.ondatachannel(evt);
         }
@@ -167,22 +176,22 @@ IpseDataChannel.prototype.withPc = function(pc) {
 }
 
 
-IpseDataChannel.prototype.createDataChannel = function(name, props) {
+IpseDataChannel.prototype.createDataChannel = function (name, props) {
     return this.peerCon.createDataChannel(name, props)
 }
-IpseDataChannel.prototype.setTo = function(tof) {
+IpseDataChannel.prototype.setTo = function (tof) {
     this.toFinger = tof;
     var d = new Date();
     var n = d.getTime();
     this.session = this.finger + "-" + tof + "-" + n; // fix this
     console.log("this.toFinger:" + this.toFinger);
 };
-IpseDataChannel.prototype.addRemote = function(tag) {
+IpseDataChannel.prototype.addRemote = function (tag) {
     var that = this;
     if (typeof webkitRTCPeerConnection == "function") {
         console.log("Peer connection does not have sctp - use getstats ?");
-        this.peerCon.getStats(function(res) {
-            res.result().forEach(function(result) {
+        this.peerCon.getStats(function (res) {
+            res.result().forEach(function (result) {
                 console.log(">>>>type>>" + result.type);
                 console.log(">>>>id>>>>" + result.id);
                 if (result.type === "googCertificate") {
@@ -190,12 +199,12 @@ IpseDataChannel.prototype.addRemote = function(tag) {
                     var fcert = result.stat("googDerBase64");
                     print = print.split(":").join("");
                     if (print === that.toFinger) {
-                        if (tag == null){
+                        if (tag == null) {
                             tag = print;
                         }
                         var printncert = {finger: print, cert: fcert, tag: tag};
                         console.log("adding matching print+cert " + JSON.stringify(printncert));
-                        Ipseorama.dbAddPrint(printncert, function() {
+                        Ipseorama.dbAddPrint(printncert, function () {
                             console.log("add print done.")
                         })
 
@@ -223,21 +232,21 @@ IpseDataChannel.prototype.addRemote = function(tag) {
         }
         var printncert = {finger: this.toFinger, cert: cert, tag: tag};
         console.log("adding matching print+cert " + JSON.stringify(printncert));
-        Ipseorama.dbAddPrint(printncert, function() {
+        Ipseorama.dbAddPrint(printncert, function () {
             console.log("add print done.")
         });
         console.log("this.toFinger:" + this.toFinger);
     }
 };
-IpseDataChannel.prototype.setNonce = function(n) {
+IpseDataChannel.prototype.setNonce = function (n) {
     this.nonceS = n;
 };
-IpseDataChannel.prototype.setOnDataChannel = function(callback) {
-    this.ondatachannel = function(evt) {
+IpseDataChannel.prototype.setOnDataChannel = function (callback) {
+    this.ondatachannel = function (evt) {
         callback(evt.channel);
     };
 };
-IpseDataChannel.prototype.sendSDP = function(pc) {
+IpseDataChannel.prototype.sendSDP = function (pc) {
     var sdpObj = Phono.sdp.parseSDP(pc.localDescription.sdp);
     console.log("this.toFinger:" + this.toFinger);
     this.nonsense = sha256.hash(this.toFinger + ":" + this.nonceS + ":" + this.myFinger).toUpperCase();
@@ -258,7 +267,7 @@ IpseDataChannel.prototype.sendSDP = function(pc) {
     }
 }
 
-IpseDataChannel.prototype.sendCandy = function(cand) {
+IpseDataChannel.prototype.sendCandy = function (cand) {
     var can_j = Phono.sdp.parseCandidate("a=" + cand.candidate);
     var candy = {
         "to": this.toFinger,
@@ -277,6 +286,6 @@ IpseDataChannel.prototype.sendCandy = function(cand) {
         showStatus("Sending candidates.");
     }
 };
-IpseDataChannel.prototype.stashCandy = function(cand) {
+IpseDataChannel.prototype.stashCandy = function (cand) {
     this.candyStash.push(cand);
 };
