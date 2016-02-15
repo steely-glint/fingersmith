@@ -3,7 +3,6 @@
  */
 
 window.indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
-
 window.IDBTransaction = window.IDBTransaction || window.webkitIDBTransaction || window.msIDBTransaction || {READ_WRITE: "readwrite"}; // This line should only be needed if it is needed to support the object's constants for older browsers
 window.IDBKeyRange = window.IDBKeyRange || window.webkitIDBKeyRange || window.msIDBKeyRange;
 if (!window.indexedDB) {
@@ -34,9 +33,14 @@ if (!window.indexedDB) {
         },
         createCert: function(app, doneCB) {
             console.log("create a new cert");
-            var creq = mozRTCPeerConnection.generateCertificate({name: "ECDSA", namedCurve: "P-256"})
-//            var creq =mozRTCPeerConnection.generateCertificate({ name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" , expires: 365*24*60*60*1000*1000 });
-            creq.then(function(cert) {
+
+            var creq;
+            if (typeof webkitRTCPeerConnection == "function") {
+                creq = webkitRTCPeerConnection.generateCertificate({name: "ECDSA", namedCurve: "P-256"});
+            } else if (typeof mozRTCPeerConnection == "function") {
+                creq =mozRTCPeerConnection.generateCertificate({ name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" , expires: 365*24*60*60*1000*1000 });
+            }
+            creq.then(function (cert) {
                 console.log("created a new cert, now store it.");
                 var tx = Ipseorama.db.transaction("IpseCert", "readwrite");
                 tx.oncomplete = function() {
@@ -55,7 +59,6 @@ if (!window.indexedDB) {
                 updateRequest.onerror = function(event) {
                     console.log("update error is " + event.target.error.message);
                 };
-
             }
             );
         },
@@ -64,13 +67,11 @@ if (!window.indexedDB) {
             var store = tx.objectStore("IpseCert");
             var index = store.index("by_app");
             console.log("Looking for cert in Indexdb");
-
             var request = index.get(app);
             request.onsuccess = function(ev) {
                 console.log("ev " + JSON.stringify(ev));
                 console.log("request " + JSON.stringify(request));
                 console.log("this " + JSON.stringify(this));
-
                 var matching = this.result;
                 if (matching) {
                     console.log("Returning matched cert in DB");
@@ -157,13 +158,11 @@ if (!window.indexedDB) {
             var store = tx.objectStore("IpseFinger");
             var index = store.index("by_finger");
             console.log("Looking for finger in Indexdb");
-
             var request = index.get(finger);
             request.onsuccess = function(ev) {
                 console.log("ev " + JSON.stringify(ev));
                 console.log("request " + JSON.stringify(request));
                 console.log("this " + JSON.stringify(this));
-
                 var matching = this.result;
                 if (matching) {
                     console.log("Returning matched print in DB");
@@ -209,7 +208,6 @@ if (!window.indexedDB) {
                 request.onupgradeneeded = function(ev) {
                     console.log("Indexdb.open() needed upgrade...");
                     console.log("ev " + JSON.stringify(ev));
-
                     var db = ev.target.result;
                     if ((!ev.oldVersion) || (ev.oldVersion < 1)) {
                         console.log("createObjectStore and  createIndex for new database ");
