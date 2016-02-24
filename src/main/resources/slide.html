@@ -36,7 +36,6 @@
         function onDcMessage(evt) {
             var mess = evt.data;
             var jval = JSON.parse(mess);
-            battery.setValue(jval.value);
         }
         function onNewDc(channel) {
             console.log("New DC ")

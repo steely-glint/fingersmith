@@ -126,6 +126,10 @@ object FingerSmithApp extends Logger {
               // Return HTML page to establish web socket
               staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"brick.html")
             }
+          case GET(Path("/babystar.html")) => {
+              // Return HTML page to establish web socket
+              staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"babystar.html")
+            }
           case GET(Path("/abrick.html")) => {
               // Return HTML page to establish web socket
               staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"abrick.html")
@@ -134,7 +138,7 @@ object FingerSmithApp extends Logger {
               // Return HTML page to establish web socket
               staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"share.html")
             }
-                      case GET(Path("/slide.html")) => {
+          case GET(Path("/slide.html")) => {
               // Return HTML page to establish web socket
               staticContentHandlerRouter ! new StaticResourceRequest(httpRequest,"slide.html")
             }
@@ -153,6 +157,10 @@ object FingerSmithApp extends Logger {
           case PathSegments("js" :: relativePath) => {
               // Serve the static js content from resources
               staticContentHandlerRouter ! new StaticResourceRequest(httpRequest, relativePath.mkString("js/", "/", ""))
+            }
+          case PathSegments("image" :: relativePath) => {
+              // Serve the static js content from resources
+              staticContentHandlerRouter ! new StaticResourceRequest(httpRequest, relativePath.mkString("image/", "/", ""))
             }
           case Path("/favicon.ico") => {
               // If favicon.ico, just return a 404 because we don't have that file
