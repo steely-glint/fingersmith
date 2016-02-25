@@ -1,6 +1,6 @@
-function IpseDataChannel(finger) {
+function IpseDataChannel(finger,oldws) {
     this.loc = window.location
-    this.ws = null;
+    this.ws = oldws;
     this.session = null;
     this.toFinger = null;
     this.myFinger = finger;
@@ -38,6 +38,9 @@ function IpseDataChannel(finger) {
         });
     }
 }
+IpseDataChannel.prototype.getWs = function () {
+    return this.ws;
+}
 
 IpseDataChannel.prototype.makeWs = function () {
     if (!window.WebSocket) {
@@ -58,7 +61,12 @@ IpseDataChannel.prototype.makeWs = function () {
     if (window.location.port != "") {
         port = ":" + window.location.port
     }
-    socket = new WebSocket(protocol + "//" + host + "/websocket/?finger=" + this.myFinger);
+    // reuse of existing ws.
+    if (this.ws != null){
+        socket = this.ws;
+    }else {
+        socket = new WebSocket(protocol + "//" + host + "/websocket/?finger=" + this.myFinger);
+    }
     session = "new"; // fix this
 
     socket.onopen = function (event) {
@@ -128,7 +136,7 @@ IpseDataChannel.prototype.makeWs = function () {
             console.log("no session in my data");
         }
     };
-    return socket;
+    this.ws =  socket;
 };
 IpseDataChannel.prototype.logError = function (error) {
     console.log(error.name + ": " + error.message);
@@ -172,7 +180,7 @@ IpseDataChannel.prototype.withPc = function (pc) {
             that.ondatachannel(evt);
         }
     };
-    this.ws = this.makeWs();
+    this.makeWs();
 }
 
 

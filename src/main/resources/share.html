@@ -55,7 +55,7 @@
             qrcode.makeCode(myid);
         }
         function onDcMessage(evt) {
-            console.log(evt.data);
+            //console.log(evt.data);
             var req = JSON.parse(evt.data);
             if (req.action === "list") {
                 // hack - we should be doing a load of checks first
@@ -65,14 +65,13 @@
             }
             if (req.action === "introduce") {
                 //{id: fing, action: "introduce", cert: cert};
-                var printncert = {finger: req.id, cert: req.cert, tag: req.id};
+                var printncert = {finger: req.id, cert: req.cert, tag: req.tag};
                 dcb = function() {
                     var rep = {status: "ok"};
                     console.log("added friend print" + req.id);
                     chan.send(JSON.stringify(rep));
                 }
                 console.log("adding friend print" + req.id);
-
                 Ipseorama.dbAddPrint(printncert, dcb);
             }
         }

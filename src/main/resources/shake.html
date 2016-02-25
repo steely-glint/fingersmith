@@ -1,4 +1,4 @@
-<html><head><title>Claim a visible device</title></head>
+<html><head><title>Introduce a friend's browser to a device you own</title></head>
     <!--script src=""></script>
 <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script-->
     <script src="js/require.js"></script>
@@ -14,47 +14,97 @@
         var ipsed = null;
         var chout;
         var nonceS;
-        var battery;
         var snap;
+        var friendFinger;
+        var deviceFinger;
+        var friendList ={};
 
         var sha256 = require("js/sha256");
-        function gotFinger(finger) {
-            myFinger = finger;
-            $('#myFinger').html(finger);
-            ipsed = new IpseDataChannel(finger);
-            ipsed.setOnDataChannel(onNewDc);
-            askforCam();
-        }
-        function onDcMessage(evt) {
+        function deviceIntroAck(evt) {
             console.log(evt.data);
             var resp = JSON.parse(evt.data);
-            if (resp.status === "ok"){
-                ipsed.addRemote(snap);
+            if (resp.status === "ok") {
+                console.log("have introd " + friendFinger + "to " + deviceFinger);
             } else {
-                console.log("problem with claim "+evt.data);
+                console.log("problem with intro " + evt.data);
+            }
+        }
+        function deviceIntro() {
+            var ipsed2 = new IpseDataChannel(myFinger,ipsed.getWs()); // ugly...
+            ipsed2.setOnDataChannel(onNewDc);
+            ipsed2.setTo(deviceFinger);
+            ipsed2.setNonce(nonceS);
+            var channel = ipsed2.createDataChannel("cert", {});
+            channel.onopen = function() {
+                var cert = friendList[friendFinger].cert;
+                var tag = "data:,"; //friendList[friendFinger].tag;
+                var mess = {id: friendFinger, action: "introduce", cert: cert, tag: tag};
+                console.log("sending " + JSON.stringify(mess));
+                channel.send(JSON.stringify(mess));
+            };
+            channel.onmessage = deviceIntroAck;
+        }
+        function introAck(evt) {
+            console.log(evt.data);
+            var resp = JSON.parse(evt.data);
+            if (resp.status === "ok") {
+                // next we target the device with the intro to our friend.
+                console.log("have introd " + deviceFinger + "to " + friendFinger);
+                deviceIntro();
+            } else {
+                console.log("problem with intro " + evt.data);
+            }
+        }
+        function setDevice(fing) {
+            deviceFinger = fing;
+            console.log("introing device " + deviceFinger + " to friend " + friendFinger);
+            var cert = friendList[deviceFinger].cert;
+            var tag = friendList[deviceFinger].tag;
+            if (!tag) {
+                tag = friendFinger;
+            }
+            var mess = {id: deviceFinger, action: "introduce", cert: cert, tag: tag};
+            chout.onmessage = introAck;
+            console.log("sending " + JSON.stringify(mess));
+            chout.send(JSON.stringify(mess));
+        }
+        function showDevices(friends) {
+            var pics = "<h3>Devices</h3><ol>";
+            friends.forEach(function(fr) {
+                friendList[fr.finger] = fr;
+                if (friendFinger != fr.finger) {
+                    pics += "<li><img src='" + fr.tag + "' onclick=\"setDevice('" + fr.finger + "');\"></li>";
+                }
+            });
+            pics += "</ol>";
+            $('#friendList').html(pics);
+        }
+
+        function listAck(evt) {
+            console.log(evt.data);
+            var resp = JSON.parse(evt.data);
+            if (resp.status === "ok") {
+                ipsed.addRemote(snap);
+                Ipseorama.dbListPrint(showDevices);
+            } else {
+                console.log("problem with claim " + evt.data);
             }
         }
         function onNewDc(channel) {
-            console.log("New DC ")
-            channel.onmessage = onDcMessage;
+            console.log("New inbound DC ???")
         }
         function makedc() {
-            var tofinger = $('#tofinger').val();
-            console.log("setting toFinger" + tofinger);
-
-            ipsed.setTo(tofinger);
+            console.log("setting friendFinger" + friendFinger);
+            ipsed.setTo(friendFinger);
             ipsed.setNonce(nonceS);
             var channel = ipsed.createDataChannel("cert", {});
-            channel.onopen = function () {
-                // e.g. enable send button
-                //enableChat(channel);
-                console.log("Outbound channel ");
-                var jmess = JSON.stringify({id:"1",action:"list"});
+            channel.onopen = function() {
+                console.log("Outbound channel to friend ");
+                var jmess = JSON.stringify({id: "1", action: "list"});
                 console.log("sending " + jmess);
                 channel.send(jmess);
             };
-
-            channel.onmessage = onDcMessage;
+            channel.onmessage = listAck;
             chout = channel;
         }
 
@@ -65,28 +115,20 @@
             var context = photo.getContext('2d');
             // set our canvas to the same size as our video
 
-            qrcode.callback = function (code) {
+            qrcode.callback = function(code) {
                 console.log("got qrcode of " + code);
                 clearInterval(tick);
                 navigator.vibrate(50);
                 var fparts = code.split(":");
-                $('#tofinger').val(fparts[0]);
+                friendFinger = fparts[0];
                 nonceS = fparts[1];
                 console.log("nonce = " + nonceS);
-                for (var i =1; i< 10; i++){ 
-                    var q = 1.0 - (0.1 *i);
-                    snap = photo.toDataURL('image/jpeg',q);
-                    console.log("snap encoded at q="+q + " of size "+snap.length)
-                    if (snap.length < 60000){
-                        break;
-                    }
-                }
-                
+                snap = photo.toDataURL('image/png');
                 $("#qr-canvas").remove();
                 $("#gumVideo").css("display", "none");
                 makedc();
             };
-            var tick = setInterval(function () {
+            var tick = setInterval(function() {
                 if ((video.videoWidth > 0) && (video.videoHeight > 0)) {
                     var rat = video.height / video.videoHeight;
                     photo.width = video.videoWidth * rat;
@@ -104,14 +146,14 @@
                 constraints.video = {optional: [{sourceId: sid}]};
             }
             navigator.getUserMedia(constraints,
-                    function (stream) {
+                    function(stream) {
                         var url = window.URL || window.webkitURL;
                         var v = document.getElementById('gumVideo');
                         v.src = url ? url.createObjectURL(stream) : stream;
                         v.play();
                         startQrDecode();
                     },
-                    function (error) {
+                    function(error) {
                         alert('Something went wrong. (error code ' + error.code + ')');
                         location.href = "nogum.htm";
                         return;
@@ -144,26 +186,32 @@
                 MediaStreamTrack.getSources(onSourcesAcquired);
             }
         }
-
-        $(document).ready(function () {
-            Ipseorama.whoAmI(gotFinger, function (err) {
+        function gotFinger(finger) {
+            myFinger = finger;
+            $('#myFinger').html(finger);
+            ipsed = new IpseDataChannel(finger);
+            ipsed.setOnDataChannel(onNewDc);
+            askforCam();
+        }
+        $(document).ready(function() {
+            Ipseorama.whoAmI(gotFinger, function(err) {
                 console.log("could not create identity " + err)
             });
         });
     </script>
-    <h1>Yopet Claim a device</h1>
+    <h1>Introduce a friend's browser to a device you own</h1>
     <div> My Fingerprint is :
         <span id="myFinger">unknown</span> </div>
     <div id="remoteVideoContainer" class="ui-video-remote-container">
         <canvas width="320" height="240" id="qr-canvas"></canvas>
         <video style="display:none;" width="320" height="240" id="gumVideo" autoplay="autoplay"/>
     </div>
-    <form onsubmit="return false;">
-        <input type="text" name="to" id="tofinger" value="2D078882CFAC8A74D56B152A162CAE2F196D2AAC7BC90300DB0180031FC56E11"/>
-    </form>
+    <div id="friendList"/>
+    <input id="actbut" type="button" value="connect" onclick="makedc();" />
 
     <h3>Output</h3>
+    <div id="result">
 
 
-</body>
+    </body>
 </html>

@@ -16,7 +16,7 @@
 
         var sha256 = require("js/sha256");
         function setFriend(fing) {
-            $('#tofinger').val(fing);
+            makedc(fing);
         }
         function showFriends(friends) {
             var pics = "<ol>";
@@ -32,6 +32,7 @@
             ipsed = new IpseDataChannel(finger);
             ipsed.setOnDataChannel(onNewDc);
             Ipseorama.dbListPrint(showFriends);
+            $('#star').hide();
         }
         function onDcMessage(evt) {
             var mess = evt.data;
@@ -56,8 +57,7 @@
         }
         var ipsechan = null;
 
-        function makedc() {
-            var tofinger = $('#tofinger').val();
+        function makedc(tofinger) {
             console.log("setting toFinger" + tofinger);
             ipsed.setTo(tofinger);
             ipsed.setNonce(nonceS);
@@ -66,6 +66,7 @@
             channel.onopen = function() {
                 console.log("Outbound channel ");
                 $('#friendList').hide();
+                $('#star').show();
                 ipsechan = channel;
                 /*var led = 0;
                  var colour = 0xffffff;
@@ -84,7 +85,7 @@
             }
             chout = channel;
         }
-        var namemap = ['bb','bo','br','so','sy','sr','by','my','mr','mb','mo','sb'];
+        var namemap = ['bb', 'bo', 'br', 'so', 'sy', 'sr', 'by', 'my', 'mr', 'mb', 'mo', 'sb'];
 
         var starmap = {
             br: [0, 1, 2],
@@ -130,13 +131,10 @@
     <div id="friendList">
 
     </div>
-    <form onsubmit="return false;">
-        <input type="text" name="to" id="tofinger" value="F935BCF78C5ED2C9C27138A557F32F8FD788B25F3D3ED2409560A9A7E93F1899"/>
-        <input type="button" value="connect" onclick="makedc();" />
-    </form>
+
 
     <h3>Output</h3>
-    <div>
+    <div id='star'>
         <img id="Image-Maps-Com-image-maps-2016-02-24-110722" src="image/starwaySmall.jpg" border="0" width="556" height="480" orgWidth="556" orgHeight="480" usemap="#image-maps-2016-02-24-110722" alt="" />
         <!-- <map name="image-maps-2016-02-24-110722" id="ImageMapsCom-image-maps-2016-02-24-110722">
              <area shape="rect" coords="554,478,556,480" alt="Image Map" style="outline:none;" title="Image Map" />
