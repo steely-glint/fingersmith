@@ -26,12 +26,15 @@
             askforCam();
         }
         function onDcMessage(evt) {
-            console.log(evt.data);
             var resp = JSON.parse(evt.data);
-            if (resp.status === "ok"){
-                ipsed.addRemote(snap);
+            if (resp.status === "ok") {
+                ipsed.addRemote(snap,
+                        function() {
+                            $('#result').html("<H3>Device Added</H3>");
+                            chout.close();
+                        });
             } else {
-                console.log("problem with claim "+evt.data);
+                console.log("problem with claim " + evt.data);
             }
         }
         function onNewDc(channel) {
@@ -45,11 +48,11 @@
             ipsed.setTo(tofinger);
             ipsed.setNonce(nonceS);
             var channel = ipsed.createDataChannel("cert", {});
-            channel.onopen = function () {
+            channel.onopen = function() {
                 // e.g. enable send button
                 //enableChat(channel);
                 console.log("Outbound channel ");
-                var jmess = JSON.stringify({id:"1",action:"list"});
+                var jmess = JSON.stringify({id: "1", action: "list"});
                 console.log("sending " + jmess);
                 channel.send(jmess);
             };
@@ -65,7 +68,7 @@
             var context = photo.getContext('2d');
             // set our canvas to the same size as our video
 
-            qrcode.callback = function (code) {
+            qrcode.callback = function(code) {
                 console.log("got qrcode of " + code);
                 clearInterval(tick);
                 navigator.vibrate(50);
@@ -73,20 +76,20 @@
                 $('#tofinger').val(fparts[0]);
                 nonceS = fparts[1];
                 console.log("nonce = " + nonceS);
-                for (var i =1; i< 10; i++){ 
-                    var q = 1.0 - (0.1 *i);
-                    snap = photo.toDataURL('image/jpeg',q);
-                    console.log("snap encoded at q="+q + " of size "+snap.length)
-                    if (snap.length < 60000){
+                for (var i = 1; i < 10; i++) {
+                    var q = 1.0 - (0.1 * i);
+                    snap = photo.toDataURL('image/jpeg', q);
+                    console.log("snap encoded at q=" + q + " of size " + snap.length)
+                    if (snap.length < 60000) {
                         break;
                     }
                 }
-                
+
                 $("#qr-canvas").remove();
                 $("#gumVideo").css("display", "none");
                 makedc();
             };
-            var tick = setInterval(function () {
+            var tick = setInterval(function() {
                 if ((video.videoWidth > 0) && (video.videoHeight > 0)) {
                     var rat = video.height / video.videoHeight;
                     photo.width = video.videoWidth * rat;
@@ -104,14 +107,14 @@
                 constraints.video = {optional: [{sourceId: sid}]};
             }
             navigator.getUserMedia(constraints,
-                    function (stream) {
+                    function(stream) {
                         var url = window.URL || window.webkitURL;
                         var v = document.getElementById('gumVideo');
                         v.src = url ? url.createObjectURL(stream) : stream;
                         v.play();
                         startQrDecode();
                     },
-                    function (error) {
+                    function(error) {
                         alert('Something went wrong. (error code ' + error.code + ')');
                         location.href = "nogum.htm";
                         return;
@@ -145,8 +148,8 @@
             }
         }
 
-        $(document).ready(function () {
-            Ipseorama.whoAmI(gotFinger, function (err) {
+        $(document).ready(function() {
+            Ipseorama.whoAmI(gotFinger, function(err) {
                 console.log("could not create identity " + err)
             });
         });
@@ -163,7 +166,7 @@
     </form>
 
     <h3>Output</h3>
-
+    <div id='result'> </div>
 
 </body>
 </html>

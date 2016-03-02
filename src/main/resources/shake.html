@@ -17,23 +17,27 @@
         var snap;
         var friendFinger;
         var deviceFinger;
-        var friendList ={};
+        var friendList = {};
 
         var sha256 = require("js/sha256");
         function deviceIntroAck(evt) {
             console.log(evt.data);
             var resp = JSON.parse(evt.data);
+            $('#friendList').hide();
             if (resp.status === "ok") {
                 console.log("have introd " + friendFinger + "to " + deviceFinger);
+                $('#result').html("<H3>Success!</H3>");
             } else {
-                console.log("problem with intro " + evt.data);
+                $('#result').html("<H3>The device did not accept intro - Reload this page to try again!</H3>");
             }
+            chout.close();
         }
         function deviceIntro() {
-            var ipsed2 = new IpseDataChannel(myFinger,ipsed.getWs()); // ugly...
+            var ipsed2 = new IpseDataChannel(myFinger, ipsed.getWs()); // ugly...
             ipsed2.setOnDataChannel(onNewDc);
             ipsed2.setTo(deviceFinger);
             ipsed2.setNonce(nonceS);
+            $('#result').html("<H3>Telling device about friend</H3>");
             var channel = ipsed2.createDataChannel("cert", {});
             channel.onopen = function() {
                 var cert = friendList[friendFinger].cert;
@@ -55,14 +59,28 @@
                 console.log("problem with intro " + evt.data);
             }
         }
+        function showOnly(fing) {
+            Ipseorama.dbListPrint(function(friends) {
+                var pics = "<ul>";
+                friends.forEach(function(fr) {
+                    if (fr.finger === fing) {
+                        pics += "<li><img src='" + fr.tag + "'/>Introducing...</li>";
+                    }
+                });
+                pics += "</ul>";
+                $('#friendList').html(pics);
+            }
+            );
+        }
         function setDevice(fing) {
             deviceFinger = fing;
             console.log("introing device " + deviceFinger + " to friend " + friendFinger);
             var cert = friendList[deviceFinger].cert;
             var tag = friendList[deviceFinger].tag;
             if (!tag) {
-                tag = friendFinger;
+                tag = friendFinger; // do a robohash here.....
             }
+            showOnly(fing);
             var mess = {id: deviceFinger, action: "introduce", cert: cert, tag: tag};
             chout.onmessage = introAck;
             console.log("sending " + JSON.stringify(mess));
@@ -78,14 +96,16 @@
             });
             pics += "</ol>";
             $('#friendList').html(pics);
+            $('#result').html("<H3>Choose a device</H3");
         }
 
         function listAck(evt) {
             console.log(evt.data);
             var resp = JSON.parse(evt.data);
             if (resp.status === "ok") {
-                ipsed.addRemote(snap);
-                Ipseorama.dbListPrint(showDevices);
+                ipsed.addRemote(snap, function() {
+                    Ipseorama.dbListPrint(showDevices);
+                });
             } else {
                 console.log("problem with claim " + evt.data);
             }
@@ -99,7 +119,7 @@
             ipsed.setNonce(nonceS);
             var channel = ipsed.createDataChannel("cert", {});
             channel.onopen = function() {
-                console.log("Outbound channel to friend ");
+                $('#result').html("<H3>Connected to friend's phone...</H3");
                 var jmess = JSON.stringify({id: "1", action: "list"});
                 console.log("sending " + jmess);
                 channel.send(jmess);
@@ -126,6 +146,7 @@
                 snap = photo.toDataURL('image/png');
                 $("#qr-canvas").remove();
                 $("#gumVideo").css("display", "none");
+                $('#result').html("<H3>Scan ok - connecting to friend's phone...</H3>");
                 makedc();
             };
             var tick = setInterval(function() {
@@ -207,11 +228,8 @@
         <video style="display:none;" width="320" height="240" id="gumVideo" autoplay="autoplay"/>
     </div>
     <div id="friendList"/>
-    <input id="actbut" type="button" value="connect" onclick="makedc();" />
-
-    <h3>Output</h3>
-    <div id="result">
+    <div id="result"> Scan a friend's smartphone.</div>
 
 
-    </body>
+</body>
 </html>

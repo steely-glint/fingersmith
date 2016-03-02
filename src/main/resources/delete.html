@@ -39,6 +39,7 @@
             var mess = evt.data;
             var jval = JSON.parse(mess);
             $('#status').html(jval.status);
+            Ipseorama.dbListPrint(showFriends);
         }
         function onNewDc(channel) {
             console.log("New DC ")
@@ -71,7 +72,7 @@
 
         });
     </script>
-    <h1>YoPet delete references to devices</h1>
+    <h1>YoPet delete references to devices or friends</h1>
     <div> My Fingerprint is :
         <span id="myFinger">unknown</span> </div>
     <div id="friendList">

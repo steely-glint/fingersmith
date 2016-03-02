@@ -59,9 +59,12 @@
             var req = JSON.parse(evt.data);
             if (req.action === "list") {
                 // hack - we should be doing a load of checks first
-                ipsed.addRemote(null);
-                var rep = {status: "ok"};
-                chan.send(JSON.stringify(rep));
+                ipsed.addRemote(null, function() {
+                    var rep = {status: "ok"};
+                    chan.send(JSON.stringify(rep));
+                    $('#result').html("<H3>Added friend's phone...</H3>");
+                });
+
             }
             if (req.action === "introduce") {
                 //{id: fing, action: "introduce", cert: cert};
@@ -70,13 +73,19 @@
                     var rep = {status: "ok"};
                     console.log("added friend print" + req.id);
                     chan.send(JSON.stringify(rep));
+                    $('#result').html("<H3>Congratulations. You now have access to your friend's device.</H3>");
+                    chan.close();
                 }
                 console.log("adding friend print" + req.id);
+                $('#result').html("<H3>Added friend's device...</H3>");
                 Ipseorama.dbAddPrint(printncert, dcb);
             }
         }
         function onNewDc(channel) {
-            console.log("New DC " + channel.label)
+            console.log("New DC " + channel.label);
+            $('#qr').hide();
+            $('#result').html("<H3>Scan ok - connected to friend's phone...</H3>");
+
             channel.onmessage = onDcMessage;
             chan = channel;
         }
@@ -92,6 +101,7 @@
     <div id="qr">
 
     </div>
+    <div id="result"> Get scanned by a friend's smartphone to join their network.</div>
 
 
 

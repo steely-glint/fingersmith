@@ -194,7 +194,7 @@ IpseDataChannel.prototype.setTo = function (tof) {
     this.session = this.finger + "-" + tof + "-" + n; // fix this
     console.log("this.toFinger:" + this.toFinger);
 };
-IpseDataChannel.prototype.addRemote = function (tag) {
+IpseDataChannel.prototype.addRemote = function (tag,done) {
     var that = this;
     if (typeof webkitRTCPeerConnection == "function") {
         console.log("Peer connection does not have sctp - use getstats ?");
@@ -207,13 +207,18 @@ IpseDataChannel.prototype.addRemote = function (tag) {
                     var fcert = result.stat("googDerBase64");
                     print = print.split(":").join("");
                     if (print === that.toFinger) {
+                        // ToDo - really need to grab this once - and store it or it becomes a 3rd party metadata source.
+                        // and ideally use random hash not our FP? Needs thought.
                         if (tag == null) {
-                            tag = print;
+                            tag = "https://robohash.org/"+print+".jpg?size=320x240&ignoreext=false";
                         }
                         var printncert = {finger: print, cert: fcert, tag: tag};
                         console.log("adding matching print+cert " + JSON.stringify(printncert));
                         Ipseorama.dbAddPrint(printncert, function () {
                             console.log("add print done.")
+                            if (done){
+                                done();
+                            }
                         })
 
                     } else {
