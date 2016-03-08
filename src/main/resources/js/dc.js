@@ -67,7 +67,7 @@ IpseDataChannel.prototype.makeWs = function () {
     }else {
         socket = new WebSocket(protocol + "//" + host + "/websocket/?finger=" + this.myFinger);
     }
-    session = "new"; // fix this
+    this.session = null; // fix this
 
     socket.onopen = function (event) {
         console.log("wsopen " + JSON.stringify(event));
@@ -117,6 +117,7 @@ IpseDataChannel.prototype.makeWs = function () {
                         theirfp = theirfp.split('"').join("");
                         console.log("their fingerprint is " + theirfp)
                         that.setTo(theirfp);
+                        this.session = data.session;
                         pc.createAnswer(function (desc) {
                             pc.setLocalDescription(desc, function () {
                                 console.log("Set Local description");
@@ -191,7 +192,7 @@ IpseDataChannel.prototype.setTo = function (tof) {
     this.toFinger = tof;
     var d = new Date();
     var n = d.getTime();
-    this.session = this.finger + "-" + tof + "-" + n; // fix this
+    this.session = this.myFinger + "-" + tof + "-" + n; // fix this
     console.log("this.toFinger:" + this.toFinger);
 };
 IpseDataChannel.prototype.addRemote = function (tag,done) {
@@ -269,7 +270,7 @@ IpseDataChannel.prototype.sendSDP = function (pc) {
         "from": this.myFinger,
         "type": pc.localDescription.type,
         "sdp": sdpObj,
-        "session": session,
+        "session": this.session,
         "nonsense": this.nonsense
     };
     console.log("sending:" + JSON.stringify(sdpcontext))
