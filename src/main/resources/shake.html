@@ -41,7 +41,8 @@
             var channel = ipsed2.createDataChannel("cert", {});
             channel.onopen = function() {
                 var cert = friendList[friendFinger].cert;
-                var tag = "data:,"; //friendList[friendFinger].tag;
+		//var tag = "data:,"; 
+                var tag = friendList[friendFinger].tag;
                 var mess = {id: friendFinger, action: "introduce", cert: cert, tag: tag};
                 console.log("sending " + JSON.stringify(mess));
                 channel.send(JSON.stringify(mess));
@@ -143,7 +144,14 @@
                 friendFinger = fparts[0];
                 nonceS = fparts[1];
                 console.log("nonce = " + nonceS);
-                snap = photo.toDataURL('image/png');
+                for (var i = 1; i < 10; i++) {
+                    var q = 1.0 - (0.1 * i);
+                    snap = photo.toDataURL('image/jpeg', q);
+                    console.log("snap encoded at q=" + q + " of size " + snap.length)
+                    if (snap.length < 60000) {
+                        break;
+                    }
+                }
                 $("#qr-canvas").remove();
                 $("#gumVideo").css("display", "none");
                 $('#result').html("<H3>Scan ok - connecting to friend's phone...</H3>");

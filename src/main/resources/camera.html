@@ -1,0 +1,84 @@
+<html><head><title>Beaglebone voltage monitor</title></head>
+    <!--script src=""></script>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script-->
+    <script src="js/require.js"></script>
+    <script src="js/jquery-1.8.3.js"></script>
+    <script src="js/phono.sdp.js"></script>
+    <script src="js/ipseorama.js"></script>
+    <script src="js/dc.js"></script>
+    <script src="js/adapter.js"></script>
+    <script type="text/javascript">
+        var myFinger = undefined;
+        var ipsed = null;
+        var chout;
+        var nonceS;
+        var friendList = {};
+
+        var sha256 = require("js/sha256");
+        function setFriend(fing){
+            $('#tofinger').val(fing);
+        }
+        function showFriends(friends){
+            var pics = "<ol>";
+            friends.forEach(function (fr){
+                friendList[fr.finger] = fr;
+
+                pics += "<li><img src='"+fr.tag+"' onclick=\"makedc('"+fr.finger+"');\"></li>";
+            });
+            pics += "</ol>";
+            $('#friendList').html(pics);
+        }
+        function gotFinger(finger) {
+            myFinger = finger;
+            $('#myFinger').html(finger);
+            ipsed = new IpseDataChannel(finger);
+            ipsed.setOnDataChannel(onNewDc);
+            Ipseorama.dbListPrint(showFriends);
+        }
+        function onDcMessage(evt) {
+            var mess = evt.data;
+            var jval = JSON.parse(mess);
+            var framedata = 'data:image/jpeg;base64,' +jval.frame;
+            $('#camera').attr("src",framedata);
+            console.log("got image");
+	    var message = {command: "read"};
+            chout.send(JSON.stringify(message));
+        }
+        function onNewDc(channel) {
+            console.log("New DC ")
+            channel.onmessage = onDcMessage;
+        }
+        function makedc(tofinger) {
+            console.log("setting toFinger" + tofinger);
+
+            ipsed.setTo(tofinger);
+            ipsed.setNonce(nonceS);
+            var channel = ipsed.createDataChannel("camera", {});
+            channel.onopen = function() {
+                console.log("Outbound channel ");
+                var message = {command: "read"};
+                channel.send(JSON.stringify(message));
+                $('#friendList').hide();
+                $('#camera').show();
+            };
+            channel.onmessage = onDcMessage;
+            chout = channel;
+        }
+        $(document).ready(function() {
+            Ipseorama.whoAmI(gotFinger, function(err) {
+                console.log("could not create identity " + err);
+            });
+        });
+    </script>
+    <h1>remote camera</h1>
+    <div> My Fingerprint is :
+        <span id="myFinger">unknown</span> </div>
+    <div id="friendList">
+
+    </div>
+
+    <h3>Output</h3>
+    <img id="camera" width="320" height="480"/>
+
+</body>
+</html>
