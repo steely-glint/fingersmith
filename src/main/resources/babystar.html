@@ -75,7 +75,7 @@
             console.log("setting toFinger" + tofinger);
             ipsed.setTo(tofinger);
             ipsed.setNonce(nonceS);
-            var channel = ipsed.createDataChannel("opc:127.0.0.1:7890", {});
+            var channel = ipsed.createDataChannel("opc:192.67.4.18:7890", {});
             //var tick;
             channel.onopen = function() {
                 console.log("Outbound channel ");

@@ -41,8 +41,8 @@
             var channel = ipsed2.createDataChannel("cert", {});
             channel.onopen = function() {
                 var cert = friendList[friendFinger].cert;
-		//var tag = "data:,"; 
-                var tag = friendList[friendFinger].tag;
+		var tag = "data:,"; 
+                //var tag = friendList[friendFinger].tag;
                 var mess = {id: friendFinger, action: "introduce", cert: cert, tag: tag};
                 console.log("sending " + JSON.stringify(mess));
                 channel.send(JSON.stringify(mess));

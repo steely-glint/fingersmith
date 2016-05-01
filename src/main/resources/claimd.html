@@ -1,0 +1,193 @@
+<html><head><title>Claim a visible device</title></head>
+    <!--script src=""></script>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script-->
+    <script src="js/require.js"></script>
+    <script src="js/jquery-1.8.3.js"></script>
+    <script src="js/phono.sdp.js"></script>
+    <script src="js/ipseorama.js"></script>
+    <script src="js/dc.js"></script>
+    <script src="js/LazarQr.min.js"></script>
+    <script src="js/adapter.js"></script>
+    <script src="js/gauge.js"></script>
+    <script type="text/javascript">
+        var myFinger = undefined;
+        var ipsed = null;
+        var chout;
+        var nonceS;
+        var battery;
+        var snap;
+
+        function consolelog(message){
+            var m = {
+                "to": "log",
+                "from": myFinger,
+                "type": "debug",
+                "message": message
+            };
+            console.log("sending:" + JSON.stringify(m))
+            if (ipsed) {
+               var ws = ipsed.getWs();
+               if ((ws) && (ws.readyState == 1)) {
+                   ws.send(JSON.stringify(m));
+               }
+            }
+        }
+
+        var sha256 = require("js/sha256");
+        function gotFinger(finger) {
+            myFinger = finger;
+            $('#myFinger').html(finger);
+            ipsed = new IpseDataChannel(finger);
+            ipsed.setOnDataChannel(onNewDc);
+            askforCam();
+        }
+        function onDcMessage(evt) {
+            var resp = JSON.parse(evt.data);
+            consolelog("DCmessage " + evt.data);
+            if (resp.status === "ok") {
+                ipsed.addRemote(snap,
+                        function() {
+                            $('#result').html("<H3>Device Added</H3>");
+                            chout.close();
+                        });
+            } else {
+                consolelog("problem with claim " + evt.data);
+            }
+        }
+        function onNewDc(channel) {
+            consolelog("New DC ")
+            channel.onmessage = onDcMessage;
+        }
+        function makedc() {
+            var tofinger = $('#tofinger').val();
+            consolelog("setting toFinger" + tofinger);
+
+            ipsed.setTo(tofinger);
+            ipsed.setNonce(nonceS);
+            var channel = ipsed.createDataChannel("cert", {});
+            channel.onopen = function() {
+                // e.g. enable send button
+                //enableChat(channel);
+                consolelog("Outbound channel ");
+                var jmess = JSON.stringify({id: "1", action: "list"});
+                consolelog("sending " + jmess);
+                channel.send(jmess);
+            };
+
+            channel.onmessage = onDcMessage;
+            chout = channel;
+        }
+
+
+        function startQrDecode() {
+            var video = document.getElementById('gumVideo');
+            var photo = document.getElementById('qr-canvas');
+            var context = photo.getContext('2d');
+            // set our canvas to the same size as our video
+
+            qrcode.callback = function(code) {
+                consolelog("got qrcode of " + code);
+                clearInterval(tick);
+                navigator.vibrate(50);
+                var fparts = code.split(":");
+                $('#tofinger').val(fparts[0]);
+                nonceS = fparts[1];
+                consolelog("nonce = " + nonceS);
+                for (var i = 1; i < 10; i++) {
+                    var q = 1.0 - (0.1 * i);
+                    snap = photo.toDataURL('image/jpeg', q);
+                    consolelog("snap encoded at q=" + q + " of size " + snap.length)
+                    if (snap.length < 60000) {
+                        break;
+                    }
+                }
+
+                $("#qr-canvas").remove();
+                $("#gumVideo").css("display", "none");
+                makedc();
+            };
+            var tick = setInterval(function() {
+                try { 
+                  if ((video.videoWidth > 0) && (video.videoHeight > 0)) {
+                    var rat = 1.0; // video.height / video.videoHeight;
+                    photo.width = video.videoWidth * rat;
+                    photo.height = video.videoHeight * rat;
+                    consolelog("set photo to " + photo.width + " x " + photo.height);
+                    consolelog("rat was " + rat);
+                    context.drawImage(video, 0, 0, photo.width, photo.height);
+                    qrcode.decode();
+                  }
+                } catch (err){
+                    consolelog(err.message);
+                }
+            }, 500);
+        }
+        function startGum(sid) {
+            var constraints = {video: true, audio: false};
+            if (sid) {
+                constraints.video = {optional: [{sourceId: sid}]};
+            }
+            navigator.getUserMedia(constraints,
+                    function(stream) {
+                        var url = window.URL || window.webkitURL;
+                        var v = document.getElementById('gumVideo');
+                        v.src = url ? url.createObjectURL(stream) : stream;
+                        v.play();
+                        startQrDecode();
+                    },
+                    function(error) {
+                        alert('Something went wrong. (error code ' + error.code + ')');
+                        location.href = "nogum.htm";
+                        return;
+                    }
+            );
+        }
+        function onSourcesAcquired(sources) {
+            var sid;
+            for (var i = 0; i != sources.length; ++i) {
+                var source = sources[i];
+                consolelog(source);
+                if ((source.kind == "video") && (source.facing == "environment")) {
+                    sid = source.id;
+                    //break;
+                }
+                // source.id -> DEVICE ID
+                // source.label -> DEVICE NAME
+                // source.kind = "audio" OR "video"
+                // TODO: add this to some datastructure of yours or a selection dialog
+            }
+            startGum(sid);
+        }
+        function askforCam() {
+            consolelog("starting QR reader");
+            //frontcam...
+            var sid;
+            if ((typeof MediaStreamTrack === 'undefined') || (typeof MediaStreamTrack.getSources == 'undefined')) {
+                startGum(sid);
+            } else {
+                MediaStreamTrack.getSources(onSourcesAcquired);
+            }
+        }
+
+        $(document).ready(function() {
+            Ipseorama.whoAmI(gotFinger, function(err) {
+                consolelog("could not create identity " + err)
+            });
+        });
+    </script>
+    <h1>Yopet Claim a device</h1>
+    <div> My Fingerprint is :
+        <span id="myFinger">unknown</span> </div>
+    <div id="remoteVideoContainer" class="ui-video-remote-container">
+        <canvas width="320" height="180" id="qr-canvas"></canvas>
+        <video style="display:none;" width="320" height="180" id="gumVideo" autoplay="autoplay"/>
+    </div>
+    <form onsubmit="return false;">
+        <input type="text" name="to" id="tofinger" value="2D078882CFAC8A74D56B152A162CAE2F196D2AAC7BC90300DB0180031FC56E11"/>
+    </form>
+
+    <h3>Output</h3>
+    <div id='result'> </div>
+
+</body>
+</html>
