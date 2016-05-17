@@ -1,0 +1,108 @@
+<html><head><title>Starway Baby</title></head>
+    <!--script src=""></script>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script-->
+    <script src="js/require.js"></script>
+    <script src="js/jquery-1.8.3.js"></script>
+    <script src="js/phono.sdp.js"></script>
+    <script src="js/ipseorama.js"></script>
+    <script src="js/dc.js"></script>
+    <script src="js/LazarQr.min.js"></script>
+    <script src="js/adapter.js"></script>
+    <script type="text/javascript">
+        var myFinger = undefined;
+        var ipsed = null;
+        var chout;
+        var nonceS;
+
+        var sha256 = require("js/sha256");
+        function setFriend(fing) {
+            showOnly(fing);
+            makedc(fing);
+        }
+        function showOnly(fing) {
+            Ipseorama.dbListPrint(function(friends) {
+                var pics = "<ul>";
+                friends.forEach(function(fr) {
+                    if (fr.finger === fing) {
+                        pics += "<li><img src='" + fr.tag + "'/>Connecting...</li>";
+                    }
+                });
+                pics += "</ul>";
+                $('#friendList').html(pics);
+            }
+            );
+        }
+        function showFriends(friends) {
+            var pics = "<ol>";
+            friends.forEach(function(fr) {
+                pics += "<li><img src='" + fr.tag + "' onclick=\"setFriend('" + fr.finger + "');\"/></li>";
+            });
+            pics += "</ol>";
+            $('#friendList').html(pics);
+        }
+        function gotFinger(finger) {
+            myFinger = finger;
+            $('#myFinger').html(finger);
+            ipsed = new IpseDataChannel(finger);
+            ipsed.setOnDataChannel(onNewDc);
+            Ipseorama.dbListPrint(showFriends);
+            $('#star').hide();
+        }
+        function onDcMessage(evt) {
+            var mess = evt.data;
+            var jval = JSON.parse(mess);
+        }
+        function onNewDc(channel) {
+            console.log("New DC ")
+            channel.onmessage = onDcMessage;
+        }
+        var ipsechan = null;
+        var starno =0;
+
+        function makedc(tofinger) {
+            console.log("setting toFinger" + tofinger);
+            ipsed.setTo(tofinger);
+            ipsed.setNonce(nonceS);
+            var channel = ipsed.createDataChannel("fakerfid", {});
+            //var tick;
+            channel.onopen = function() {
+                console.log("Outbound channel ");
+                $('#friendList').hide();
+                $('#star').show();
+                ipsechan = channel;
+            };
+            channel.onmessage = onDcMessage;
+            channel.onclose = function() {
+                //clearInterval(tick);
+                $('#friendList').show();
+                ipsechan = null;
+            }
+            chout = channel;
+        }
+        function star() {
+                var message = {command: "write"};
+                message.value = (starno++ ) % 12;
+                console.log("sending "+JSON.stringify(message));
+                ipsechan.send(JSON.stringify(message));
+            }
+
+        $(document).ready(function() {
+            Ipseorama.whoAmI(gotFinger, function(err) {
+                console.log("could not create identity " + err);
+            });
+        });
+    </script>
+    <h1>Starway Baby</h1>
+    <div> My Fingerprint is :
+        <span id="myFinger">unknown</span> </div>
+    <div id="friendList">
+
+    </div>
+
+
+    <h3>Output</h3>
+    <div id='star'>
+        <img id="Image-Maps-Com-image-maps-2016-02-24-110722" src="image/starwaySmall.jpg" border="0" width="556" height="480" orgWidth="556" orgHeight="480" onclick="star()" alt="" />
+    </div>
+    </body>
+    </html>
