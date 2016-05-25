@@ -11,7 +11,7 @@ if (!window.indexedDB) {
 
 (function() {
     Ipseorama = {
-        chromeVersionThatStoresCerts: 100, // sooner hopefully
+        chromeVersionThatStoresCerts: 53, // sooner hopefully
         db: null,
         cleanDb: function(app, doneCB) {
             var request = indexedDB.deleteDatabase("ipseorama");
@@ -37,7 +37,7 @@ if (!window.indexedDB) {
 
             var creq;
             if (typeof webkitRTCPeerConnection == "function") {
-                creq = webkitRTCPeerConnection.generateCertificate({name: "ECDSA", namedCurve: "P-256"});
+                creq = webkitRTCPeerConnection.generateCertificate({ name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" , expires: 365*24*60*60*1000*1000 });
             } else if (typeof mozRTCPeerConnection == "function") {
                 creq =mozRTCPeerConnection.generateCertificate({ name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" , expires: 365*24*60*60*1000*1000 });
             }

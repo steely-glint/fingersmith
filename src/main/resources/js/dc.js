@@ -22,8 +22,8 @@ function IpseDataChannel(finger,oldws) {
     if (typeof webkitRTCPeerConnection == "function") {
         if (window.webrtcDetectedVersion >= Ipseorama.chromeVersionThatStoresCerts ) {
             var that = this;
-            Ipseorama.addMyCertToPeerConf(peerconfig, function () {
-                var wcpc = new webkitRTCPeerConnection(peerconfig, null)
+            Ipseorama.addMyCertToPeerConf(configuration, function () {
+                var wcpc = new webkitRTCPeerConnection(configuration, null)
                 that.withPc(wcpc);
             });
         } else {
