@@ -1,0 +1,132 @@
+<html><head><title>Beaglebone voltage monitor</title></head>
+    <script src="js/require.js"></script>
+    <script src="js/jquery-1.8.3.js"></script>
+    <script src="js/phono.sdp.js"></script>
+    <script src="js/ipseorama.js"></script>
+    <script src="js/dc.js"></script>
+    <script src="js/adapter.js"></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.0/d3.min.js' charset='utf-8'></script>
+    <script src='js/metricsgraphics.js'></script>
+<link href="js/metricsgraphics.css" rel="stylesheet" type="text/css">
+    <script type="text/javascript">
+        var myFinger = undefined;
+        var ipsed = null;
+        var chout;
+        var nonceS;
+        var battery;
+        var hourNo = 0;
+	var dayString = "v-2016-06-10-";
+        var data = [];
+
+        function pad(num, size) {
+           var s = "000000000" + num;
+           return s.substr(s.length-size);
+        }
+
+        var sha256 = require("js/sha256");
+        function setFriend(fing){
+            $('#tofinger').val(fing);
+            makedc();
+	    $('#friendList').hide();
+        }
+        function showFriends(friends){
+            var pics = "<ol>";
+            friends.forEach(function (fr){
+                pics += "<li><img src='"+fr.tag+"' onclick=\"setFriend('"+fr.finger+"');\"></li>";
+            });
+            pics += "</ol>";
+            $('#friendList').html(pics);
+        }
+        function gotFinger(finger) {
+            myFinger = finger;
+            $('#myFinger').html(finger);
+            ipsed = new IpseDataChannel(finger);
+            ipsed.setOnDataChannel(onNewDc);
+            Ipseorama.dbListPrint(showFriends);
+        }
+        function sendReq(){
+            var hourS = dayString + pad(hourNo,2);
+            console.log("requesting "+hourS);
+            var message ={command: "zrange", args : [hourS,"0","-1"]}
+            chout.send(JSON.stringify(message));
+        }
+        function onDcMessage(evt) {
+            var mess = evt.data;
+            console.log("got -> "+mess);
+            var jval = JSON.parse(mess);
+            for (n in jval.values){
+               v = jval.values[n];
+               for (x in v) {
+	         y = v[x];
+                 var xd = new Date(parseInt(x+"000"));
+                 var yv = parseFloat(y);
+                 var point = {x: xd , y : yv };
+                 data.push(point);
+		 console.log("x "+xd+ " y "+yv);
+               }
+            }
+
+
+	    hourNo += 1;
+            if (hourNo < 24){
+              sendReq();
+            } else {
+		renderGraph();
+            }
+        }
+        function onNewDc(channel) {
+            console.log("New DC ")
+            channel.onmessage = onDcMessage;
+        }
+        function makedc() {
+            var tofinger = $('#tofinger').val();
+            console.log("setting toFinger" + tofinger);
+
+            ipsed.setTo(tofinger);
+            ipsed.setNonce(nonceS);
+            var channel = ipsed.createDataChannel("redis", {});
+            channel.onopen = function() {
+                console.log("Outbound channel ");
+                sendReq();
+            };
+            channel.onmessage = onDcMessage;
+            chout = channel;
+        }
+        function renderGraph() {
+console.log("rendering ");
+MG.data_graphic({
+  title: "Solar voltage",
+  description: "Voltage on a battery charged by PV solar power",
+  data: data,
+  width: 400,
+  height: 250,
+  target: document.getElementById('chartContainer'),
+  x_accessor: "x",
+  y_accessor: "y",
+  interpolate: "step_after"
+});
+}
+
+        $(document).ready(function() {
+            Ipseorama.whoAmI(gotFinger, function(err) {
+                console.log("could not create identity " + err);
+            });
+        });
+    </script>
+    <h1>Solar chart</h1>
+    <div> My Fingerprint is :
+        <span id="myFinger">unknown</span> </div>
+    <div id="friendList">
+
+    </div>
+    <form onsubmit="return false;">
+        <input type="text" name="to" id="tofinger" value="F935BCF78C5ED2C9C27138A557F32F8FD788B25F3D3ED2409560A9A7E93F1899"/>
+        <input type="button" value="connect" onclick="makedc();" />
+    </form>
+
+    <h3>Output</h3>
+    <div id="chartContainer">
+    </div>
+
+</body>
+</html>
