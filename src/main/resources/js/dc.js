@@ -1,4 +1,4 @@
-function IpseDataChannel(finger,oldws) {
+function IpseDataChannel(finger,oldws,onPcReady) {
     this.loc = window.location
     this.ws = oldws;
     this.session = null;
@@ -8,6 +8,7 @@ function IpseDataChannel(finger,oldws) {
     this.nonceS = null;
     this.nonsense = "";
     this.candyStash = [];
+    this.onPcReady = onPcReady;
     var configuration = {
         "iceServers": [
             {urls: "stun:146.148.121.175:3478"},
@@ -182,6 +183,9 @@ IpseDataChannel.prototype.withPc = function (pc) {
         }
     };
     this.makeWs();
+    if (this.onPcReady){
+        this.onPcReady(this);
+    }
 }
 
 

@@ -33,7 +33,7 @@
             chout.close();
         }
         function deviceIntro() {
-            var ipsed2 = new IpseDataChannel(myFinger, ipsed.getWs()); // ugly...
+            var id2 = new IpseDataChannel(myFinger, ipsed.getWs(),function(ipsed2) {
             ipsed2.setOnDataChannel(onNewDc);
             ipsed2.setTo(deviceFinger);
             ipsed2.setNonce(nonceS);
@@ -48,7 +48,7 @@
                 channel.send(JSON.stringify(mess));
             };
             channel.onmessage = deviceIntroAck;
-        }
+        } );}
         function introAck(evt) {
             console.log(evt.data);
             var resp = JSON.parse(evt.data);

@@ -15,7 +15,8 @@
         var nonceS;
         var battery;
         var hourNo = 0;
-	var dayString = "v-2016-06-10-";
+        var dayNo=1;
+	var dayString = "v-2016-07-";
         var data = [];
 
         function pad(num, size) {
@@ -45,7 +46,7 @@
             Ipseorama.dbListPrint(showFriends);
         }
         function sendReq(){
-            var hourS = dayString + pad(hourNo,2);
+            var hourS = dayString +pad(dayNo,2)+"-"+ pad(hourNo,2);
             console.log("requesting "+hourS);
             var message ={command: "zrange", args : [hourS,"0","-1"]}
             chout.send(JSON.stringify(message));
@@ -71,7 +72,13 @@
             if (hourNo < 24){
               sendReq();
             } else {
-		renderGraph();
+                dayNo += 1;
+                hourNo = 0;
+                if (dayNo <= 31){
+                   sendReq();
+                } else {
+		   renderGraph();
+                }
             }
         }
         function onNewDc(channel) {
@@ -98,11 +105,13 @@ MG.data_graphic({
   title: "Solar voltage",
   description: "Voltage on a battery charged by PV solar power",
   data: data,
-  width: 400,
-  height: 250,
+  width: 800,
+  height: 400,
   target: document.getElementById('chartContainer'),
   x_accessor: "x",
   y_accessor: "y",
+  min_y: 10.0,
+  max_y: 15.0,
   interpolate: "step_after"
 });
 }

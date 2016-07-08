@@ -19,6 +19,8 @@
         var sha256 = require("js/sha256");
         function setFriend(fing){
             $('#tofinger').val(fing);
+            $('#friendList').html("<hr/>");
+            makedc();
         }
         function showFriends(friends){
             var pics = "<ol>";
@@ -98,7 +100,6 @@
     </div>
     <form onsubmit="return false;">
         <input type="text" name="to" id="tofinger" value="F935BCF78C5ED2C9C27138A557F32F8FD788B25F3D3ED2409560A9A7E93F1899"/>
-        <input type="button" value="connect" onclick="makedc();" />
     </form>
 
     <h3>Output</h3>
