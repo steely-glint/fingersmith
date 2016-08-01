@@ -1,0 +1,191 @@
+<html><head><title>Starway Baby</title></head>
+    <!--script src=""></script>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script-->
+    <script src="js/require.js"></script>
+    <script src="js/jquery-1.8.3.js"></script>
+    <script src="js/phono.sdp.js"></script>
+    <script src="js/ipseorama.js"></script>
+    <script src="js/dc.js"></script>
+    <script src="js/LazarQr.min.js"></script>
+    <script src="js/adapter.js"></script>
+    <script type="text/javascript">
+        var myFinger = undefined;
+        var ipsed = null;
+        var chout;
+        var nonceS;
+
+        var sha256 = require("js/sha256");
+        function setFriend(fing) {
+            showOnly(fing);
+            makedc(fing);
+        }
+        function showOnly(fing) {
+            Ipseorama.dbListPrint(function(friends) {
+                var pics = "<ul>";
+                friends.forEach(function(fr) {
+                    if (fr.finger === fing) {
+                        pics += "<li><img src='" + fr.tag + "'/>Connecting...</li>";
+                    }
+                });
+                pics += "</ul>";
+                $('#friendList').html(pics);
+            }
+            );
+        }
+        function showFriends(friends) {
+            var pics = "<ol>";
+            friends.forEach(function(fr) {
+                pics += "<li><img src='" + fr.tag + "' onclick=\"setFriend('" + fr.finger + "');\"/></li>";
+            });
+            pics += "</ol>";
+            $('#friendList').html(pics);
+        }
+        function gotFinger(finger) {
+            myFinger = finger;
+            $('#myFinger').html(finger);
+            ipsed = new IpseDataChannel(finger);
+            ipsed.setOnDataChannel(onNewDc);
+            Ipseorama.dbListPrint(showFriends);
+            $('#star').hide();
+        }
+        function onDcMessage(evt) {
+            var mess = evt.data;
+            var jval = JSON.parse(mess);
+        }
+        function onNewDc(channel) {
+            console.log("New DC ")
+            channel.onmessage = onDcMessage;
+        }
+        function setOnePixel(num, pixc) {
+            var message = {command: "paint"};
+            var values = [];
+            for (var i = 0; i < 24; i++) {
+                var c = 0;
+                if (i == num) {
+                    c = pixc;
+                }
+                values.push(c);
+            }
+            message.pixels = values;
+            return message;
+        }
+        var ipsechan = null;
+
+        function makedc(tofinger) {
+            console.log("setting toFinger" + tofinger);
+            ipsed.setTo(tofinger);
+            ipsed.setNonce(nonceS);
+            var channel = ipsed.createDataChannel("opc:127.0.0.1:7890", {});
+            //var tick;
+            channel.onopen = function() {
+                console.log("Outbound channel ");
+                $('#friendList').hide();
+                $('#star').show();
+                ipsechan = channel;
+            };
+            channel.onmessage = onDcMessage;
+            channel.onclose = function() {
+                //clearInterval(tick);
+                $('#friendList').show();
+                ipsechan = null;
+            }
+            chout = channel;
+        }
+        var namemap = ['bb', 'bo', 'br', 'so', 'sy', 'sr', 'by', 'my', 'mr', 'mb', 'mo', 'sb'];
+
+        var starmap = {
+            br: [0,],
+            mr: [1],
+            sr: [2],
+            by: [3],
+            my: [4],
+            sy: [5],
+            bo: [6],
+            mo: [7],
+            so: [8],
+            bb: [9],
+            mb: [10],
+            sb: [11]
+        };
+        function star(starno, area) {
+            var pixc = 0xffffff;
+            var starname = namemap[starno];
+            if (starname === 'un') {
+                console.log("starno " + starno + " unmapped");
+            } else {
+                var values = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+                var starA = starmap[starname];
+                for (var index = 0; index < starA.length; index++) {
+                    var led = starA[index];
+                    values[led] = pixc;
+                }
+                var message = {command: "paint"};
+                message.pixels = values;
+                ipsechan.send(JSON.stringify(message));
+            }
+        }
+
+        $(document).ready(function() {
+            Ipseorama.whoAmI(gotFinger, function(err) {
+                console.log("could not create identity " + err);
+            });
+        });
+    </script>
+    <h1>Starway Baby</h1>
+    <div> My Fingerprint is :
+        <span id="myFinger">unknown</span> </div>
+    <div id="friendList">
+
+    </div>
+
+
+    <h3>Output</h3>
+    <div id='star'>
+        <img id="Image-Maps-Com-image-maps-2016-02-24-110722" src="image/starwaySmall.jpg" border="0" width="556" height="480" orgWidth="556" orgHeight="480" usemap="#image-maps-2016-02-24-110722" alt="" />
+        <!-- <map name="image-maps-2016-02-24-110722" id="ImageMapsCom-image-maps-2016-02-24-110722">
+             <area shape="rect" coords="554,478,556,480" alt="Image Map" style="outline:none;" title="Image Map" />
+             <area  alt="" title="" onclick="star('br')" shape="poly" coords="313,249,307,250,302,253,299,258,298,264,299,270,302,275,307,278,313,279,319,278,324,275,327,270,328,264,327,258,324,253,319,250" style="outline:none;" target="_self"     />
+             <area  alt="" title="" onclick="star('mr')" shape="poly" coords="435,203,429,204,424,207,421,212,420,218,421,224,424,229,429,232,435,233,441,232,446,229,449,224,450,218,449,212,446,207,441,204" style="outline:none;" target="_self"     />
+             <area  alt="" title="" onclick="star('sr')" shape="poly" coords="191,216,184,217,178,221,174,227,173,234,174,241,178,247,184,251,191,252,198,251,204,247,208,241,209,234,208,227,204,221,198,217" style="outline:none;" target="_self"     />
+             <area  alt="" title="" onclick="star('by')" shape="poly" coords="306,120,300,121,295,124,292,129,291,135,292,141,295,146,300,149,306,150,312,149,317,146,320,141,321,135,320,129,317,124,312,121" style="outline:none;" target="_self"     />
+             <area  alt="" title="" onclick="star('my')" shape="poly" coords="201,59,196,60,193,63,190,66,189,71,190,76,193,79,196,82,201,83,206,82,209,79,212,76,213,71,212,66,209,63,206,60" style="outline:none;" target="_self"     />
+             <area  alt="" title="" onclick="star('sy')" shape="poly" coords="97,299,93,300,89,302,87,306,86,310,87,314,89,318,93,320,97,321,101,320,105,318,107,314,108,310,107,306,105,302,101,300" style="outline:none;" target="_self"     />
+             <area  alt="" title="" onclick="star('bo')" shape="poly" coords="287,370,283,371,279,373,277,377,276,381,277,385,279,389,283,391,287,392,291,391,295,389,297,385,298,381,297,377,295,373,291,371" style="outline:none;" target="_self"     />
+             <area  alt="" title="" onclick="star('mo')" shape="poly" coords="443,327,439,328,436,330,434,333,433,337,434,341,436,344,439,346,443,347,447,346,450,344,452,341,453,337,452,333,450,330,447,328" style="outline:none;" target="_self"     />
+             <area  alt="" title="" onclick="star('so')" shape="poly" coords="215,425,213,425,211,427,209,429,209,431,209,433,211,435,213,437,215,437,217,437,219,435,221,433,221,431,221,429,219,427,217,425" style="outline:none;" target="_self"     />
+             <area  alt="" title="" onclick="star('bb')" shape="poly" coords="495,398,493,398,491,400,489,402,489,404,489,406,491,408,493,410,495,410,497,410,499,408,501,406,501,404,501,402,499,400,497,398" style="outline:none;" target="_self"     />
+             <area  alt="" title="" onclick="star('mb')" shape="poly" coords="283,33,280,34,278,35,277,37,276,40,277,43,278,45,280,46,283,47,286,46,288,45,289,43,290,40,289,37,288,35,286,34" style="outline:none;" target="_self"     />
+             <area  alt="" title="" onclick="star('sb')" shape="poly" coords="173,349,171,349,169,350,168,352,168,354,168,356,169,358,171,359,173,359,175,359,177,358,178,356,178,354,178,352,177,350,175,349" style="outline:none;" target="_self"     />
+         </map> -->
+        <map name="image-maps-2016-02-24-110722" id="ImageMapsCom-image-maps-2016-02-24-110722">
+            <area shape="rect" coords="554,478,556,480" alt="Image Map" style="outline:none;" title="Image Map" />
+            <area  alt="" title="" onclick="star(0, this)" shape="poly" coords="313,249,307,250,302,253,299,258,298,264,299,270,302,275,307,278,313,279,319,278,324,275,327,270,328,264,327,258,324,253,319,250" style="outline:none;" target="_self"     />
+            <area  alt="" title="" onclick="star(1, this)" shape="poly" coords="435,203,429,204,424,207,421,212,420,218,421,224,424,229,429,232,435,233,441,232,446,229,449,224,450,218,449,212,446,207,441,204" style="outline:none;" target="_self"     />
+            <area  alt="" title="" onclick="star(2, this)" shape="poly" coords="191,216,184,217,178,221,174,227,173,234,174,241,178,247,184,251,191,252,198,251,204,247,208,241,209,234,208,227,204,221,198,217" style="outline:none;" target="_self"     />
+            <area  alt="" title="" onclick="star(3, this)" shape="poly" coords="495,398,493,398,491,400,489,402,489,404,489,406,491,408,493,410,495,410,497,410,499,408,501,406,501,404,501,402,499,400,497,398" style="outline:none;" target="_self"     />
+            <area  alt="" title="" onclick="star(4, this)" shape="poly" coords="283,33,280,34,278,35,277,37,276,40,277,43,278,45,280,46,283,47,286,46,288,45,289,43,290,40,289,37,288,35,286,34" style="outline:none;" target="_self"     />
+            <area  alt="" title="" onclick="star(5, this)" shape="poly" coords="173,349,171,349,169,350,168,352,168,354,168,356,169,358,171,359,173,359,175,359,177,358,178,356,178,354,178,352,177,350,175,349" style="outline:none;" target="_self"     />
+            <area  alt="" title="" onclick="star(6, this)" shape="poly" coords="306,120,300,121,295,124,292,129,291,135,292,141,295,146,300,149,306,150,312,149,317,146,320,141,321,135,320,129,317,124,312,121" style="outline:none;" target="_self"     />
+            <area  alt="" title="" onclick="star(7, this)" shape="poly" coords="201,59,196,60,193,63,190,66,189,71,190,76,193,79,196,82,201,83,206,82,209,79,212,76,213,71,212,66,209,63,206,60" style="outline:none;" target="_self"     />
+            <area  alt="" title="" onclick="star(8, this)" shape="poly" coords="97,299,93,300,89,302,87,306,86,310,87,314,89,318,93,320,97,321,101,320,105,318,107,314,108,310,107,306,105,302,101,300" style="outline:none;" target="_self"     />
+            <area  alt="" title="" onclick="star(9, this)" shape="poly" coords="287,370,283,371,279,373,277,377,276,381,277,385,279,389,283,391,287,392,291,391,295,389,297,385,298,381,297,377,295,373,291,371" style="outline:none;" target="_self"     />
+            <area  alt="" title="" onclick="star(10, this)" shape="poly" coords="443,327,439,328,436,330,434,333,433,337,434,341,436,344,439,346,443,347,447,346,450,344,452,341,453,337,452,333,450,330,447,328" style="outline:none;" target="_self"     />
+            <area  alt="" title="" onclick="star(11, this)" shape="poly" coords="215,425,213,425,211,427,209,429,209,431,209,433,211,435,213,437,215,437,217,437,219,435,221,433,221,431,221,429,219,427,217,425" style="outline:none;" target="_self"     />
+        </map>
+    </div>
+    <!--
+    br -> sr
+    mr -> sy
+    sr -> sb
+    bb -> br
+    mb -> bo
+    sb -> so
+    by -> by
+    my -> my
+    sy -> mb
+    bo -> mr
+    mo -> mo
+    so -> bb
+    
+    </body>
+    </html>
