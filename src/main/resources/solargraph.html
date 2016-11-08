@@ -1,4 +1,6 @@
-<html><head><title>Beaglebone voltage monitor</title></head>
+<html><head><title>Solar voltage graph</title>
+<link href="/pipe.css" media="all" rel="stylesheet" />
+</head>
     <script src="js/require.js"></script>
     <script src="js/jquery-1.8.3.js"></script>
     <script src="js/phono.sdp.js"></script>
@@ -16,7 +18,7 @@
         var battery;
         var hourNo = 0;
         var dayNo=1;
-	var dayString = "v-2016-07-";
+	var dayString = "v-2016-08-";
         var data = [];
 
         function pad(num, size) {
@@ -74,7 +76,7 @@
             } else {
                 dayNo += 1;
                 hourNo = 0;
-                if (dayNo <= 31){
+                if (dayNo <= 11){
                    sendReq();
                 } else {
 		   renderGraph();
