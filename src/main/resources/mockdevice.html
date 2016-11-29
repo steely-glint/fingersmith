@@ -1,0 +1,111 @@
+<html><head>
+<title>Share my browser</title></head>
+    <meta name="viewport" content="width=device-width">
+
+    <script src="js/require.js"></script>
+    <script src="js/jquery-1.8.3.js"></script>
+    <script src="js/phono.sdp.js"></script>
+    <script src="js/ipseorama.js"></script>
+    <script src="js/dc.js"></script>
+
+    <script src="js/adapter.js"></script>
+    <script type="text/javascript">
+        var myFinger = undefined;
+        var ipsed = null;
+        var chan;
+        var nonceS;
+        var snap;
+
+        var sha256 = require("js/sha256");
+
+        function onn() {
+           var that = ipsed;
+           var pc = ipsed.peerCon;
+           var sdpConstraints = {'mandatory': {'OfferToReceiveAudio': false, 'OfferToReceiveVideo': false}}
+           pc.createOffer(function (desc) {
+            var sdpObj = Phono.sdp.parseSDP(desc.sdp);
+            sdpObj = Phono.sdp.filterVideoCodec(sdpObj,"H264");
+            sdpObj = Phono.sdp.simplify(sdpObj);
+       	    desc.sdp =  Phono.sdp.buildSDP(sdpObj);
+            console.log("new Local description"+ JSON.stringify(desc));
+            pc.setLocalDescription(desc, function () {
+                var sde = JSON.stringify(desc);
+                console.log("Set Local description");
+                chan.send(sde);
+            }, that.logError);
+           }, that.logError, sdpConstraints);
+        }
+
+ 
+        function startGum(sid) {
+            var constraints = {video: true, audio: false};
+            if (sid) {
+                constraints.video = {optional: [{sourceId: sid}]};
+            }
+            navigator.getUserMedia(constraints,
+                    function(stream) {
+                        var url = window.URL || window.webkitURL;
+                        var v = document.getElementById('gumVideo');
+                        v.src = url ? url.createObjectURL(stream) : stream;
+                        v.play();
+			ipsed.peerCon.addStream(stream);
+                    },
+                    function(error) {
+                        alert('Something went wrong. (error code ' + error.code + ')');
+                        location.href = "nogum.htm";
+                        return;
+                    }
+            );
+        }
+        function gotFinger(finger) {
+            myFinger = finger;
+            $('#myFinger').html(finger);
+            ipsed = new IpseDataChannel(finger);
+            ipsed.setOnDataChannel(onNewDc);
+        }
+        function onDcMessage(evt) {
+            console.log(evt.data);
+            var message = JSON.parse(evt.data);
+            if(message.type==="upgrade"){
+                startGum();
+	    } 
+            if ((message.type==="offer") || (message.type==="answer")){
+	        var rtcd = new RTCSessionDescription(message);
+                ipsed.peerCon.setRemoteDescription(rtcd, 
+                      function () {
+                        console.log("set " + message.type + " ok");
+                    },function (e) {
+                        console.log("Set Remote description error " + e);
+                    });
+            }
+        }
+        function onNewDc(channel) {
+            console.log("New DC " + channel.label);
+            if (channel.label == "rtpcamera"){
+                channel.onmessage = onDcMessage;
+                chan = channel;
+                ipsed.peerCon.onnegotiationneeded = onn;
+	    }
+        }
+        $(document).ready(function() {
+            Ipseorama.whoAmI(gotFinger, function(err) {
+                console.log("could not create identity " + err)
+            });
+        });
+    </script>
+    <h1>Share this device by scanning it with another.</h1>
+    <div> My Fingerprint is :
+        <span id="myFinger">unknown</span> </div>
+    <div id="me" class="me">
+
+    </div>
+    <div id="result"> Emulate a device for now.</div>
+
+
+
+    <div id="remoteVideoContainer" class="ui-video-remote-container">
+        <canvas width="320" height="240" id="qr-canvas"></canvas>
+        <video width="640" height="360" id="gumVideo" autoplay="autoplay"/>
+    </div>
+</body>
+</html>

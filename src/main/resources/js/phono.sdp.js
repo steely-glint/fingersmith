@@ -179,14 +179,21 @@
         return dc;
     }
 
-    _parseSsrc = function(params, ssrc) {
-        var ssrcObj = {};
-        if (ssrc != undefined)
-            ssrcObj = ssrc;
-        ssrcObj.ssrc = params[0];
+    _parseSsrc = function(params, ssrcs) {
+        if (ssrcs == undefined)
+            ssrcs = [];
+        var sid = params[0];
+        var ssrcObj = ssrcs.find(function(s){return s.ssrc == sid;});
+        if (!ssrcObj){
+          ssrcObj = {ssrc:sid};
+          ssrcs.push(ssrcObj);
+        }
         var value = params[1];
         ssrcObj[value.split(":")[0]] = value.split(":")[1];
-        return ssrcObj;
+        if ((value.split(":")[0] === "msid") && params[2]){
+            ssrcObj.msid3 = params[2];
+        }
+        return ssrcs;
     }
 
     _parseGroup = function(params) {
@@ -206,6 +213,9 @@
         var mid = params[0];
         return mid;
     }
+    _parseMidSem = function(params) {
+        return params;
+    }
     
     _parseSetup = function(params) {
         var setup = params[0];
@@ -218,7 +228,7 @@
         var c = candidateObj;
         var sdp = "candidate:" + c.foundation + " " +
                 c.component + " " +
-                c.protocol.toUpperCase() + " " +
+                c.protocol.toLowerCase() + " " +
                 c.priority + " " +
                 c.ip + " " +
                 c.port;
@@ -267,6 +277,16 @@
             sdp += "a=ptime:" + codecObj.ptime;
             sdp += "\r\n";
         }
+        if (codecObj.fmtp){
+           sdp += "a=fmtp:"+codecObj.id+" "+codecObj.fmtp+"\r\n";
+        }
+        if (codecObj.rtcpfbs){
+           codecObj.rtcpfbs.forEach(function(rtcpfb){
+              sdp+= "a=rtcp-fb:"+codecObj.id;
+              rtcpfb.forEach(function(par){sdp+=" "+par;});
+              sdp+="\r\n";
+           });
+        }
         return sdp;
     }
 
@@ -283,7 +303,17 @@
 
     _buildMedia = function(sdpObj) {
         var sdp = "";
-// move fingerprint and ice to outside the m=
+        sdp += "m=" + sdpObj.media.type + " " + sdpObj.media.port + " " + sdpObj.media.proto;
+        var mi = 0;
+        while (mi + 1 <= sdpObj.media.pts.length) {
+            var pts = sdpObj.media.pts[mi];
+            if ((sdpObj.media.type == "application") 
+               || sdpObj.codecs.some(function(c){return pts == c.id;})){
+                 sdp = sdp + " " + pts;
+            }
+            mi = mi + 1;
+        }
+        sdp = sdp + "\r\n";
         if (sdpObj.fingerprint) {
             sdp = sdp + _buildFingerprint(sdpObj.fingerprint);
         }
@@ -297,17 +327,11 @@
                 sdp = sdp + "a=ice-options:" + ice.options + "\r\n";
             }
         }
-        sdp += "m=" + sdpObj.media.type + " " + sdpObj.media.port + " " + sdpObj.media.proto;
-        var mi = 0;
-        while (mi + 1 <= sdpObj.media.pts.length) {
-            sdp = sdp + " " + sdpObj.media.pts[mi];
-            mi = mi + 1;
-        }
-        sdp = sdp + "\r\n";
 
         if (sdpObj.connection) {
             sdp = sdp + "c=" + sdpObj.connection.nettype + " " + sdpObj.connection.addrtype + " " +
-                    sdpObj.connection.address + "\r\n";
+                    "0.0.0.0\r\n";
+                    //sdpObj.connection.address + "\r\n";
         }
 
         if (sdpObj.mid) {
@@ -341,9 +365,9 @@
             } else {
                 sdp = sdp + "a=sendrecv\r\n";
             }
-        } else {
+        } /*else {
             sdp = sdp + "a=sendrecv\r\n";
-        }
+        } */
 
 
 
@@ -367,15 +391,23 @@
               sdi = sdi + 1;
         }
 
+        if (sdpObj.ssrcgroup){
+           var gline = "a=ssrc-group:";
+           sdpObj.ssrcgroup.forEach(function(p){gline += p+" ";});
+           sdp += gline.trim() + "\r\n";
+        }
 
-        if (sdpObj.ssrc) {
-            var ssrc = sdpObj.ssrc;
+        if (sdpObj.ssrcs) {
+          sdpObj.ssrcs.forEach(function(ssrc){
             if (ssrc.cname)
                 sdp = sdp + "a=ssrc:" + ssrc.ssrc + " " + "cname:" + ssrc.cname + "\r\n";
             if (ssrc.mslabel)
                 sdp = sdp + "a=ssrc:" + ssrc.ssrc + " " + "mslabel:" + ssrc.mslabel + "\r\n";
             if (ssrc.label)
                 sdp = sdp + "a=ssrc:" + ssrc.ssrc + " " + "label:" + ssrc.label + "\r\n";
+            if (ssrc.msid)
+                sdp = sdp + "a=ssrc:" + ssrc.ssrc + " " + "msid:" + ssrc.msid + " "+ ssrc.msid3 +"\r\n";
+          });
         }
 
         return sdp;
@@ -393,6 +425,76 @@
     }
 
     Phono.sdp = {
+       simplify:function(sdpObj){
+           // strip the video SDP down to a minimum so a webcam can do it
+           var cont = sdpObj.contents.find(function(c){return c.media.type == "video"});
+           // zapp the fbs
+           cont.codecs.forEach(function(c){c.rtcpfbs=[];});
+           var firstssrc = cont.ssrcgroup[1];
+           delete cont['ssrcgroup'];
+           cont.ssrcs = cont.ssrcs.filter(
+              function(s){
+                  console.log("sid = "+s.sid+" ssrc ="+firstssrc);
+                  return s.ssrc == firstssrc;
+              }
+           );
+
+           return sdpObj;
+       },
+       filterVideoCodec:function(sdpObj,codecName){
+           var cont = sdpObj.contents.find(function(c){return c.media.type == "video"});
+           cont.codecs = cont.codecs.filter(
+               function(codec){ 
+                   return codec.name == codecName;
+               });
+           return sdpObj;
+       },
+	// apply patch actions to the sdp  
+       patch: function(sdpString,acts){
+            if (!acts.patches) return acts;
+            var sdpLines = sdpString.split("\r\n");
+            for (var patchNo in acts.patches){
+                patch = acts.patches[patchNo];
+                console.log("act = "+patch.action);
+                if (patch.action == "append"){
+                   sdpLines = sdpLines.concat(patch.lines);
+                } else {
+                    var where = sdpLines.length;
+                    for (var sdpLine in sdpLines) {
+                       var sline = sdpLines[sdpLine];
+                       if (sline.startsWith(patch.at)){
+                          where = sdpLine;
+                          break;
+                       }
+                    }
+                    console.log("found "+patch.at+" at "+where);
+                    if (patch.action == "prepend"){
+                        sdpLines.splice(where,0,patch.line);
+                    }
+                    if (patch.action == "increment"){
+                       var bits = sdpLines[where].split(" ");
+                       var v = parseInt(bits[patch.field]);
+                       console.log("old v is "+v);
+                       v = v+1;
+                       bits[patch.field] = ""+v;
+                       var line = bits.join(" ");
+                       console.log("new line is "+line);
+                       sdpLines[where] = line;
+                    }
+                    if (patch.action == "replace"){
+                       sdpLines[where] = patch.line;
+                    }
+                    if (patch.action == "duplicate"){
+                       sdpLines.push(sdpLines[where]);
+                    }
+
+                }
+	    }
+            var stripped = sdpLines.filter(function(l){ return l.length >0});
+            var sdp = stripped.join("\r\n")+"\r\n";
+            var ret = { type: acts.type, sdp: sdp};
+            return ret;
+       },
         // sdp: an SDP text string representing an offer or answer, missing candidates
         // Return an object representing the SDP in Jingle like constructs
         parseSDP: function(sdpString) {
@@ -462,6 +564,23 @@
                         case "rtcp-mux":
                             sdpObj['rtcp-mux'] = true;
                             break;
+                        case "fmtp":
+                            var codec = sdpObj.codecs.find(function(c){ return c.id == a.params[0];});
+                            if (codec) {
+                                codec.fmtp =sline.split(" ")[1] ;
+                            }
+                            break;
+                        case "rtcp-fb":
+                            var rtcpfb = a.params.slice(1);
+                            var codec = sdpObj.codecs.find(function(c){ return c.id == a.params[0];});
+                            if (codec) {
+                                if (!codec.rtcpfbs){
+                                    codec.rtcpfbs = [rtcpfb];
+                                } else {
+                                    codec.rtcpfbs.push(rtcpfb);
+                                }
+                            }
+                            break;
                         case "rtpmap":
                             var codec = _parseRtpmap(a.params);
                             if (codec)
@@ -476,8 +595,11 @@
                         case "recvonly":
                             sdpObj.recvonly = "recvonly";
                             break;
+                        case "ssrc-group":
+                            sdpObj.ssrcgroup = a.params;
+                            break;
                         case "ssrc":
-                            sdpObj.ssrc = _parseSsrc(a.params, sdpObj.ssrc);
+                            sdpObj.ssrcs = _parseSsrc(a.params, sdpObj.ssrcs);
                             break;
                         case "fingerprint":
                             var print = _parseFingerprint(a.params);
@@ -500,6 +622,12 @@
                             var sctp = _parseSctpmap(a.params);
                             if (sctp)
                                 sdpObj.sctpmap.push(sctp)
+                            break;
+                        case "msid-semantic":
+                            var midsem = _parseMidSem(a.params);
+                            if (contentsObj.group){
+                               contentsObj.group.midSem = midsem;
+                            }
                             break;
                     }
                 }
@@ -526,6 +654,7 @@
 
             sdp = sdp + "s=-\r\n" +
                     "t=0 0\r\n";
+            //sdp = sdp + "a=msid-semantic: WMS SomeArchaneMagicValue\r\n";
 
             if (contentsObj.connection) {
                 var connection = contentsObj.connection;
@@ -541,6 +670,15 @@
                     ig = ig + 1;
                 }
                 sdp = sdp + "\r\n";
+                if (group.midSem){
+                   sdp += "a=msid-semantic:";
+                    var im=0;
+                    while (im + 1 <= group.midSem.length) {
+                        sdp = sdp + " " + group.midSem[im];
+                        im = im + 1;
+                    }
+                    sdp = sdp + "\r\n";
+                }
             }
 
             var contents = contentsObj.contents;

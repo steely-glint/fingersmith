@@ -1,0 +1,122 @@
+<html><head><title>Beaglebone voltage monitor</title></head>
+    <!--script src=""></script>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script-->
+    <script src="js/require.js"></script>
+    <script src="js/jquery-1.8.3.js"></script>
+    <script src="js/phono.sdp.js"></script>
+    <script src="js/ipseorama.js"></script>
+    <script src="js/dc.js"></script>
+    <script src="js/adapter.js"></script>
+    <script type="text/javascript">
+        var myFinger = undefined;
+        var ipsed = null;
+        var chout;
+        var nonceS;
+        var friendList = {};
+        var imagen =0;
+
+        var sha256 = require("js/sha256");
+        function setFriend(fing){
+            $('#tofinger').val(fing);
+        }
+        function showFriends(friends){
+            var pics = "<ol>";
+            friends.forEach(function (fr){
+                friendList[fr.finger] = fr;
+
+                pics += "<li><img src='"+fr.tag+"' onclick=\"makedc('"+fr.finger+"');\"></li>";
+            });
+            pics += "</ol>";
+            $('#friendList').html(pics);
+        }
+        function sendLd(){
+            var desc = ipsed.peerCon.localDescription;
+            var mess = {type:desc.type, sdp:desc.sdp, tick:Date.now()};
+	    console.log("sending "+JSON.stringify(mess));
+	    console.log("to "+chout.label);
+	    chout.send(JSON.stringify(mess));                    
+        }
+        
+        function srd() {
+            var pc = ipsed.peerCon;
+                    console.log("set Remote description  ok");
+                        pc.createAnswer(function (desc) {
+                            pc.setLocalDescription(desc, function () {
+                                console.log("Set Local description");
+                                setTimeout(sendLd,100);
+                            }, function (e) {
+                                console.log("Set Local description error " + e);
+                            });
+                        }, function (e) {
+                            console.log("Create answer error " + e);
+                        });
+                    }
+       function srdfail(e) {
+                    console.log("Set Remote description error " + e);
+                }
+
+        function remoteStream(e){
+            console.log("got new stream");
+            var video = document.getElementById('ownervideo');
+            attachMediaStream(video,e.stream);
+            $('#ownervideo').show();
+        }
+
+
+        function gotFinger(finger) {
+            myFinger = finger;
+            $('#myFinger').html(finger);
+            ipsed = new IpseDataChannel(finger);
+            ipsed.setOnDataChannel(onNewDc);
+            Ipseorama.dbListPrint(showFriends);
+        }
+        function onDcMessage(evt) {
+            var message = JSON.parse(evt.data);
+            console.log("->"+JSON.stringify(message));
+            if ((message.type== "offer" )|| (message.type =="answer")){
+                var patched = Phono.sdp.patch(ipsed.peerCon.remoteDescription.sdp,message);
+                console.log("-+>"+JSON.stringify(patched));
+                var rtcd = new RTCSessionDescription(patched);
+                ipsed.peerCon.setRemoteDescription(rtcd,srd,srdfail); 
+            }
+        }
+        function onNewDc(channel) {
+            console.log("New DC ")
+            channel.onmessage = onDcMessage;
+        }
+        function makedc(tofinger) {
+            console.log("setting toFinger" + tofinger);
+
+            ipsed.setTo(tofinger);
+            ipsed.setNonce(nonceS);
+            var channel = ipsed.createDataChannel("rtpcamera", {});
+            channel.onopen = function() {
+                console.log("Outbound channel ");
+                $('#friendList').hide();
+                ipsed.peerCon.onaddstream= remoteStream;
+                chout = channel;
+                $('#ownervideo').show();
+                setTimeout(function(){
+                  chout.send(JSON.stringify({type:"upgrade",time:Date.now()}));
+                },100);
+            };
+            channel.onmessage = onDcMessage;
+        }
+        $(document).ready(function() {
+            Ipseorama.whoAmI(gotFinger, function(err) {
+                console.log("could not create identity " + err);
+            });
+        });
+    </script>
+    <h1>remote camera</h1>
+    <div> My Fingerprint is :
+        <span id="myFinger">unknown</span> </div>
+    <div id="friendList">
+
+    </div>
+
+    <h3>Output</h3>
+ <video id="ownervideo" autoplay="autoplay" width="640" height="360" />
+
+</body>
+</html>
