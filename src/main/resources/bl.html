@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Bluetooth supported pairing</title>
+<!-- Origin Trial Token, feature = Web Bluetooth, origin = https://pi.pe, expires = 2017-01-24 -->
+<meta http-equiv="origin-trial" data-feature="Web Bluetooth" data-expires="2017-01-24" content="At+eFpPi6OI0oH0ycsTr4pwz9b/h0mMjhKIYL6MZtGuItXzc2cQq68CR9FEdAzwyetL+RHXiNuLdSgLcsW4hIA8AAABQeyJvcmlnaW4iOiAiaHR0cHM6Ly9waS5wZTo0NDMiLCAiZmVhdHVyZSI6ICJXZWJCbHVldG9vdGgiLCAiZXhwaXJ5IjogMTQ4NTMyMDM5OX0=">
+  </head>
+
+
+ <body>
+ Bluetooth....
+ <button onclick="onConnectBtnClick()">Connect</button>
+ </body>
+
+  <script>
+    var serviceUuid = parseInt("0x919E");
+    var values = [
+          {uuid:"0xFC0A",name:"fpa"} ,
+          {uuid:"0xFC0B",name:"fpb"} ,
+          {uuid:"0xFC0C",name:"nonce"}
+    ];
+    
+      window.onload = function(){
+        this.buttonTitle = "Connect";
+          this.bluetoothDevice = null;
+          this.fpa = null;
+          this.fpb = null;
+          this.nonce = null;
+        };
+
+
+        function onConnectBtnClick() {
+          switch(this.buttonTitle) {
+            case "Connect":
+              if (this.bluetoothDevice) {
+                console.log("Internal: Bluetooth device already exists.");
+              }
+              // Fall through
+            case "Reconnect":
+              this.connect();
+              break;
+            case "Disconnect":
+              if (!this.bluetoothDevice && !this.bluetoothDevice.gatt) {
+                console.log("Internal: No Bluetooth device or connection exists.");
+              }
+              this.bluetoothDevice.gatt.disconnect();
+              break;
+            default:
+              console.log("Internal: Wrong buttonTitle state!");
+          }
+        };
+
+        var onGATTDisconnected=  function() {
+          this.buttonTitle = "Reconnect";
+        }
+        var requestDevice= function() {
+          if (this.bluetoothDevice) {
+            console.log('Attempting to reconnect...')
+            return Promise.resolve(this.bluetoothDevice);
+          }
+
+          console.log('Requesting Bluetooth Device...');
+          return navigator.bluetooth.requestDevice({
+            filters: [
+              { name: 'Pipe' },
+              {services: [serviceUuid]}
+            ],
+          }).then(device => {
+            this.bluetoothDevice = device;
+            console.log('Got Bluetooth Device...');
+
+            device.addEventListener('gattserverdisconnected',
+              this.onGATTDisconnected.bind(this));
+            return device;
+          });
+        };
+
+function createHexString(value) {
+    var result = "";
+    var arr = new Uint8Array(value.buffer);
+    for (i in arr) {
+        var str = arr[i].toString(16);
+        str = str.length == 0 ? "00" :
+              str.length == 1 ? "0" + str : 
+              str.length == 2 ? str :
+              str.substring(str.length-2, str.length);
+        result += str;
+    }
+    return result;
+}
+
+        function getChValue(value,service){
+            var charc = value.chara;
+            console.log("Reading characteristics."+value.name);
+            return charc.readValue();
+        }
+
+        function fetchCh(value,service) {
+          var iuuid = parseInt(value.uuid);
+          console.log("request "+value.name+" characteristic.");
+          return service.getCharacteristic(iuuid);
+        }
+
+
+        var connect= function() {
+          this.requestDevice().then(device => {
+            console.log("Connecting to GATT server...");
+            return device.gatt.connect();
+          })
+          .then(server => {
+            console.log("Requesting primary service...");
+            return server.getPrimaryService(serviceUuid);
+          })
+          .then(service => {
+            var sequence = Promise.resolve();
+            console.log("Requesting characteristics...");
+            values.forEach(value => {
+               sequence = sequence.then( _ => { 
+                 return this.fetchCh(value,service);}).then(charc => {
+                    console.log("Got characteristics."+charc);
+                    value.chara = charc;
+                 });
+            });
+            values.forEach(value => {
+               sequence = sequence.then( _ => { 
+                 return this.getChValue(value,service);}).then(vb => {
+                    value.hex = createHexString(vb);
+                    console.log("Got value."+JSON.stringify(value));
+                 });
+            });
+            return sequence;
+          })
+          .then(_ => {
+            console.log("Values "+JSON.stringify(values));
+            console.log("Connection fully established - disconnecting.");
+            this.bluetoothDevice.gatt.disconnect()
+          })
+          .catch(err => {
+            this.bluetoothDevice = null;
+            console.log(err);
+
+          })
+
+        }
+
+
+  </script>
+
+</html>
