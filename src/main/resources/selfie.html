@@ -6,15 +6,15 @@
     <script src="js/phono.sdp.js"></script>
     <script src="js/ipseorama.js"></script>
     <script src="js/dc.js"></script>
+    <script src="js/LazarQr.min.js"></script>
     <script src="js/adapter.js"></script>
+    <script src="js/gauge.js"></script>
     <script type="text/javascript">
         var myFinger = undefined;
         var ipsed = null;
         var chout;
         var nonceS;
         var friendList = {};
-        var mess ="";
-        var imagen =0;
 
         var sha256 = require("js/sha256");
         function setFriend(fing){
@@ -38,18 +38,8 @@
             Ipseorama.dbListPrint(showFriends);
         }
         function onDcMessage(evt) {
-            mess +=evt.data;
-            if (mess.endsWith("}")){
-               var jval = JSON.parse(mess);
-               mess="";
-               var framedata = 'data:image/jpeg;base64,' +jval.frame;
-               $('#camera').attr("src",framedata);
-               console.log("got image"+imagen++);
-	       window.setTimeout( function(){
-	          var message = {command: "read"};
-                  chout.send(JSON.stringify(message));
-               },10);
-            }
+            var mess = evt.data;
+            var jval = JSON.parse(mess);
         }
         function onNewDc(channel) {
             console.log("New DC ")
@@ -60,13 +50,12 @@
 
             ipsed.setTo(tofinger);
             ipsed.setNonce(nonceS);
-            var channel = ipsed.createDataChannel("camera", {});
+            var channel = ipsed.createDataChannel("screen", {});
             channel.onopen = function() {
                 console.log("Outbound channel ");
-                var message = {command: "read"};
+                var tag = friendList[tofinger].tag;
+                var message = {command: "show",tag:tag};
                 channel.send(JSON.stringify(message));
-                $('#friendList').hide();
-                $('#camera').show();
             };
             channel.onmessage = onDcMessage;
             chout = channel;
@@ -77,7 +66,7 @@
             });
         });
     </script>
-    <h1>remote camera</h1>
+    <h1>PIPE gauge</h1>
     <div> My Fingerprint is :
         <span id="myFinger">unknown</span> </div>
     <div id="friendList">
@@ -85,7 +74,6 @@
     </div>
 
     <h3>Output</h3>
-    <img id="camera" width="640" height="360"/>
 
 </body>
 </html>

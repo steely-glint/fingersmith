@@ -1,31 +1,28 @@
-<html><head><title>Beaglebone voltage monitor</title></head>
-    <!--script src=""></script>
-<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script-->
+<html><head><title>pipe solar voltage monitor</title></head>
+<link href="/pipe.css" media="all" rel="stylesheet" />
     <script src="js/require.js"></script>
     <script src="js/jquery-1.8.3.js"></script>
     <script src="js/phono.sdp.js"></script>
     <script src="js/ipseorama.js"></script>
     <script src="js/dc.js"></script>
     <script src="js/adapter.js"></script>
+    <script src="js/compass.js"></script>
     <script type="text/javascript">
         var myFinger = undefined;
         var ipsed = null;
         var chout;
         var nonceS;
-        var friendList = {};
-        var mess ="";
-        var imagen =0;
 
         var sha256 = require("js/sha256");
         function setFriend(fing){
             $('#tofinger').val(fing);
+            makedc();
+	    $('#friendList').hide();
         }
         function showFriends(friends){
             var pics = "<ol>";
             friends.forEach(function (fr){
-                friendList[fr.finger] = fr;
-
-                pics += "<li><img src='"+fr.tag+"' onclick=\"makedc('"+fr.finger+"');\"></li>";
+                pics += "<li><img src='"+fr.tag+"' onclick=\"setFriend('"+fr.finger+"');\"></li>";
             });
             pics += "</ol>";
             $('#friendList').html(pics);
@@ -38,54 +35,62 @@
             Ipseorama.dbListPrint(showFriends);
         }
         function onDcMessage(evt) {
-            mess +=evt.data;
-            if (mess.endsWith("}")){
-               var jval = JSON.parse(mess);
-               mess="";
-               var framedata = 'data:image/jpeg;base64,' +jval.frame;
-               $('#camera').attr("src",framedata);
-               console.log("got image"+imagen++);
-	       window.setTimeout( function(){
-	          var message = {command: "read"};
-                  chout.send(JSON.stringify(message));
-               },10);
+            var mess = evt.data;
+            console.log("->"+mess);
+            var jval = JSON.parse(mess);
+            
+            if (jval.bearing){
+               degrees = jval.bearing;
             }
+           
         }
         function onNewDc(channel) {
             console.log("New DC ")
             channel.onmessage = onDcMessage;
         }
-        function makedc(tofinger) {
+        function closedc(){
+            console.log("closing dc");
+            chout.close();
+        }
+        function makedc() {
+            var tofinger = $('#tofinger').val();
             console.log("setting toFinger" + tofinger);
 
             ipsed.setTo(tofinger);
             ipsed.setNonce(nonceS);
-            var channel = ipsed.createDataChannel("camera", {});
+            var channel = ipsed.createDataChannel("tcp/192.67.4.170/9000", {});
             channel.onopen = function() {
                 console.log("Outbound channel ");
-                var message = {command: "read"};
-                channel.send(JSON.stringify(message));
-                $('#friendList').hide();
-                $('#camera').show();
+                init();
+                $('#setup').hide();
             };
             channel.onmessage = onDcMessage;
             chout = channel;
         }
+
         $(document).ready(function() {
             Ipseorama.whoAmI(gotFinger, function(err) {
                 console.log("could not create identity " + err);
             });
         });
     </script>
-    <h1>remote camera</h1>
+<div class="wrapper">
+    <h1>pipe Microbit compass</h1>
+<div id="setup">
     <div> My Fingerprint is :
         <span id="myFinger">unknown</span> </div>
     <div id="friendList">
 
     </div>
-
-    <h3>Output</h3>
-    <img id="camera" width="640" height="360"/>
+    <form onsubmit="return false;">
+        <input type="text" name="to" id="tofinger" value="F935BCF78C5ED2C9C27138A557F32F8FD788B25F3D3ED2409560A9A7E93F1899"/>
+        <input type="button" value="connect" onclick="makedc();" />
+    </form>
+</div>
+    <div id="gaugeContainer" onclick="closedc();" >
+	<canvas id="compass" width="200" height="200"></canvas>
+    </div>
+</div>
 
 </body>
 </html>

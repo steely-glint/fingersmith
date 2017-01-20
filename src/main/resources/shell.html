@@ -55,7 +55,8 @@
                   $('#stdout').html(h)
                 }
                 if (jval.stderr) {
-                  $('#stderr').html(jval.stderr)
+		console.log("stderr"+jval.stderr);
+                  $('#stderr').html(jval.stderr);
                 }
             }
             function onNewDc(channel) {

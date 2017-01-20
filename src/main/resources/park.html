@@ -7,6 +7,7 @@
     <script src="js/ipseorama.js"></script>
     <script src="js/dc.js"></script>
     <script src="js/adapter.js"></script>
+    <script src="js/gauge.js"></script>
     <script type="text/javascript">
         var myFinger = undefined;
         var ipsed = null;
@@ -15,13 +16,15 @@
         var battery;
 
         var sha256 = require("js/sha256");
-        function setFriend(fing) {
+        function setFriend(fing){
             $('#tofinger').val(fing);
+            makedc();
+	    $('#friendList').hide();
         }
-        function showFriends(friends) {
+        function showFriends(friends){
             var pics = "<ol>";
-            friends.forEach(function(fr) {
-                pics += "<li><img src='" + fr.tag + "' onclick=\"setFriend('" + fr.finger + "');\"></li>";
+            friends.forEach(function (fr){
+                pics += "<li><img src='"+fr.tag+"' onclick=\"setFriend('"+fr.finger+"');\"></li>";
             });
             pics += "</ol>";
             $('#friendList').html(pics);
@@ -36,6 +39,13 @@
         function onDcMessage(evt) {
             var mess = evt.data;
             var jval = JSON.parse(mess);
+            var voltage = jval.value /1000.0;
+            battery.setValue(voltage);
+            if (voltage > 2.0){
+               $('#occupy').html("Occupied");
+            } else {
+               $('#occupy').html("Available");
+	    }	
         }
         function onNewDc(channel) {
             console.log("New DC ")
@@ -47,29 +57,50 @@
 
             ipsed.setTo(tofinger);
             ipsed.setNonce(nonceS);
-            var channel = ipsed.createDataChannel("pwm1", {});
+            var channel = ipsed.createDataChannel("in_voltage0_raw", {});
             channel.onopen = function() {
                 console.log("Outbound channel ");
-                $("#slider").on("input", function() {
-                    var mess = {command: "write", value: this.value};
-                    console.log("sending " + JSON.stringify(mess));
-                    channel.send(JSON.stringify(mess));
-                });
+                var message = {command: "start"};
+                channel.send(JSON.stringify(message));
             };
             channel.onmessage = onDcMessage;
             chout = channel;
         }
+        function makeGauge(id, min, max, unit, title, ticks, format, zero, high) {
+            var opts = {
+                renderTo: id,
+                width: 300,
+                height: 300,
+                title: title,
+                minValue: min,
+                maxValue: max,
+                value: zero,
+                majorTicks: ticks,
+                animation: false,
+                //highlights: high,
+                //minorTicks - {Integer} - number of minor ticks to draw between major ticks on a gauge bar. Default is 10.
+                //strokeTicks - {Boolean} - the flag which identifies if the ticks bar should be stroked or not. By default is true.
+                units: unit,
+                valueFormat: format // { int : 4, dec : 0 }
+            };
+            var gauge = new Gauge(opts); // create sexy gauge!
+            gauge.draw();
 
+            return gauge;
+        }
 
         $(document).ready(function() {
             Ipseorama.whoAmI(gotFinger, function(err) {
                 console.log("could not create identity " + err);
             });
+            var bhigh = [{from: 0.0, to: 0.5 , color: '#e00'}, {from: 0.5, to: 1.0, color: '#ccc'}, {from: 1.0, to: 2.5, color: '#0a0'}];
+            battery = makeGauge("Voltage", 0.0, 2.5, "Volts", "Range", [0.0, 0.5, 1.0, 1.5, 2.0, 2.5], {int: 1, dec: 1}, 0.0, bhigh);
         });
     </script>
-    <h1>PIPE slider</h1>
+    <h1>PIPE gauge</h1>
     <div> My Fingerprint is :
         <span id="myFinger">unknown</span> </div>
+    <div style="font-size:64px" id="occupy">status...</div>
     <div id="friendList">
 
     </div>
@@ -78,9 +109,9 @@
         <input type="button" value="connect" onclick="makedc();" />
     </form>
 
-    <h3>Input</h3>
-    <div id="sliderContainer">
-        <input class="slider" type="range" min="0" max="1000000" step="10000" value="0" id="slider" />
+    <h3>Output</h3>
+    <div id="gaugeContainer">
+        <canvas class="gauge" id="Voltage"></canvas>
     </div>
 
 </body>

@@ -94,18 +94,18 @@
         var namemap = ['bb', 'bo', 'br', 'so', 'sy', 'sr', 'by', 'my', 'mr', 'mb', 'mo', 'sb'];
 
         var starmap = {
-            br: [0, 1, 2],
-            mr: [3, 4],
-            sr: [5],
-            by: [6, 7, 8],
-            my: [9, 10],
-            sy: [11],
-            bo: [12, 13, 14],
-            mo: [15, 16],
-            so: [17],
-            bb: [18, 19, 20],
-            mb: [21, 22],
-            sb: [23]
+            br: [0,],
+            mr: [1],
+            sr: [2],
+            by: [3],
+            my: [4],
+            sy: [5],
+            bo: [6],
+            mo: [7],
+            so: [8],
+            bb: [9],
+            mb: [10],
+            sb: [11]
         };
         function star(starno, area) {
             var pixc = 0xffffff;
@@ -113,7 +113,7 @@
             if (starname === 'un') {
                 console.log("starno " + starno + " unmapped");
             } else {
-                var values = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+                var values = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
                 var starA = starmap[starname];
                 for (var index = 0; index < starA.length; index++) {
                     var led = starA[index];

@@ -1,6 +1,6 @@
-<html><head><title>Introduce a friend's browser to a device you own</title></head>
-    <!--script src=""></script>
-<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script-->
+<html><head>
+<link href="/pipe.css" media="all" rel="stylesheet" />
+<title>Introduce a friend's browser to a device you own</title></head>
     <script src="js/require.js"></script>
     <script src="js/jquery-1.8.3.js"></script>
     <script src="js/phono.sdp.js"></script>
@@ -33,7 +33,7 @@
             chout.close();
         }
         function deviceIntro() {
-            var ipsed2 = new IpseDataChannel(myFinger, ipsed.getWs()); // ugly...
+            var id2 = new IpseDataChannel(myFinger, ipsed.getWs(),function(ipsed2) {
             ipsed2.setOnDataChannel(onNewDc);
             ipsed2.setTo(deviceFinger);
             ipsed2.setNonce(nonceS);
@@ -48,7 +48,7 @@
                 channel.send(JSON.stringify(mess));
             };
             channel.onmessage = deviceIntroAck;
-        }
+        } );}
         function introAck(evt) {
             console.log(evt.data);
             var resp = JSON.parse(evt.data);
