@@ -1,10 +1,26 @@
 <html><head><title>Shell</title>
+<style>
+.term {
+    font-family: courier,fixed,swiss,monospace,sans-serif;
+    font-size: 14px;
+    color: #f0f0f0;
+    background: #000000;
+}
+
+.termReverse {
+    color: #000000;
+    background: #00ff00;
+}
+#note {
+    font-size: 12px;
+}
+</style>
         <script src="js/require.js"></script>
         <script src="js/jquery-1.8.3.js"></script>
         <script src="js/phono.sdp.js"></script>
         <script src="js/ipseorama.js"></script>
         <script src="js/dc.js"></script>
-        <script src="js/LazarQr.min.js"></script>
+        <script src="js/term.js"></script>
         <script src="js/adapter.js"></script>
         <script type="text/javascript">
             var myFinger = undefined;
@@ -40,35 +56,41 @@
             }
             function gotFinger(finger) {
                 myFinger = finger;
-                $('#myFinger').html(finger);
                 ipsed = new IpseDataChannel(finger);
                 ipsed.setOnDataChannel(onNewDc);
                 Ipseorama.dbListPrint(showFriends);
                 $('#remote').hide();
             }
+function arrayBufferToString(buffer){
+    var arr = new Uint8Array(buffer);
+    var str = String.fromCharCode.apply(String, arr);
+    if(/[\u0080-\uffff]/.test(str)){
+        throw new Error("this string seems to contain (still encoded) multibytes");
+    }
+    return str;
+}
+function stringToArrayBuffer(str){
+    if(/[\u0080-\uffff]/.test(str)){
+        throw new Error("this needs encoding, like UTF-8");
+    }
+    var arr = new Uint8Array(str.length);
+    for(var i=str.length; i--; )
+        arr[i] = str.charCodeAt(i);
+    return arr.buffer;
+}
             
             function onDcMessage(evt) {
-                var mess = evt.data;
-                var jval = JSON.parse(mess);
-                if (jval.stdout) {
-                  var h = $('#stdout').html()+"<br/>"+jval.stdout
-                  $('#stdout').html(h)
-                }
-                if (jval.stderr) {
-		console.log("stderr"+jval.stderr);
-                  $('#stderr').html(jval.stderr);
-                }
+                var mess = arrayBufferToString(evt.data);
+                console.log(">"+mess);
+                term.write(mess);
             }
             function onNewDc(channel) {
                 console.log("New DC ")
                 channel.onmessage = onDcMessage;
             }
-            function sendLine() {
-                var value = $('#shellin').val();
-                var message = {command: "write"};
-                message.text = value;
-                console.log("sending "+JSON.stringify(message));
-                ipsechan.send(JSON.stringify(message));
+            function sendLine(value) {
+                console.log("<"+value);
+                ipsechan.send(stringToArrayBuffer(value));
             }
             var ipsechan = null;
 
@@ -76,18 +98,20 @@
                 console.log("setting toFinger" + tofinger);
                 ipsed.setTo(tofinger);
                 ipsed.setNonce(nonceS);
-                var channel = ipsed.createDataChannel("shell", {});
+                var channel = ipsed.createDataChannel("term", {});
                 //var tick;
                 channel.onopen = function() {
                     console.log("Outbound channel ");
                     $('#friendList').hide();
-                    $('#remote').show();
-                    $('#shell').onchange=sendLine;
+                    var fl = document.getElementById('terminal');
+                    term = new Term(80, 24, sendLine,fl);
+                    term.open();
                     ipsechan = channel;
                 };
                 channel.onmessage = onDcMessage;
                 channel.onclose = function() {
                     $('#friendList').show();
+                    $('#terminal').hide();
                     ipsechan = null;
                 }
                 chout = channel;
@@ -102,23 +126,12 @@
         </script>
     </head>
     <body>
-        <h1>Shell </h1>
-        <div> My Fingerprint is :
-            <span id="myFinger">unknown</span> </div>
+        <h1>Terminal </h1>
         <div id="friendList">
 
         </div>
+        <div id="terminal"></div>
 
 
-        <h3>Output</h3>
-        <div id='remote'>
-    		<form onsubmit="sendLine();return false;">
-                <input type="text" name="shell" id="shellin" value="date"/>
-    		</form>
-		<br/>
-	        output text :<br/> <code id="stdout"></code>
-		<br/>
-	        error text :<div id="stderr"></div>
-        </div>
     </body>
 </html>

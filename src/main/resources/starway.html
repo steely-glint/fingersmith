@@ -1,0 +1,108 @@
+<html><head>
+<title>Disrupt - |pipe| </title></head>
+    <meta name="viewport" content="width=device-width">
+
+    <script src="js/require.js"></script>
+    <script src="js/jquery-1.8.3.js"></script>
+    <script src="js/phono.sdp.js"></script>
+    <script src="js/ipseorama.js"></script>
+    <script src="js/dc.js"></script>
+    <script src="js/qrcode.js"></script>
+
+    <script src="js/adapter.js"></script>
+    <script type="text/javascript">
+        var myFinger = undefined;
+        var ipsed = null;
+        var chan;
+        var nonceS;
+        var snap;
+
+        var sha256 = require("js/sha256");
+
+        function createHexString(arr) {
+            var result = "";
+            var z;
+
+            for (var i = 0; i < arr.length; i++) {
+                var str = arr[i].toString(16);
+
+                z = 2 - str.length + 1;
+                str = Array(z).join("0") + str;
+
+                result += str;
+            }
+
+            return result.toUpperCase();
+        }
+
+        function mkNonce() {
+            var buf = new Uint8Array(16);
+            window.crypto.getRandomValues(buf);
+            var ret = createHexString(buf);
+            return ret;
+        }
+        function gotFinger(finger) {
+            myFinger = finger;
+            ipsed = new IpseDataChannel(finger);
+            ipsed.setOnDataChannel(onNewDc);
+            var myid = finger + ":" + mkNonce();
+            console.log("mk qr of " + myid);
+            var qrcode = new QRCode(document.getElementById("qr"), {
+                //width: 480,
+                //height: 480,
+                correctLevel: QRCode.CorrectLevel.L
+            });
+            qrcode.makeCode(myid);
+        }
+        function onDcMessage(evt) {
+            //console.log(evt.data);
+            var req = JSON.parse(evt.data);
+            if (req.action === "list") {
+                // hack - we should be doing a load of checks first
+                ipsed.addRemote(null, function() {
+                    var rep = {status: "ok"};
+                    chan.send(JSON.stringify(rep));
+                    $('#result').html("<H3>Added friend's phone...</H3>");
+                });
+
+            }
+            if (req.action === "introduce") {
+                //{id: fing, action: "introduce", cert: cert};
+                var printncert = {finger: req.id, cert: req.cert, tag: req.tag};
+                dcb = function() {
+                    var rep = {status: "ok"};
+                    console.log("added friend print" + req.id);
+                    chan.send(JSON.stringify(rep));
+                    $('#result').html("<H3>Congratulations. You now have access to your friend's device.</H3>");
+                    chan.close();
+		    window.setTimeout(function(){document.location="morse.html";},10000);
+                }
+                console.log("adding friend print" + req.id);
+                $('#result').html("<H3>Added friend's device...</H3>");
+                Ipseorama.dbAddPrint(printncert, dcb);
+            }
+        }
+        function onNewDc(channel) {
+            console.log("New DC " + channel.label);
+            $('#qr').hide();
+            $('#result').html("<H3>Scan ok - connected to friend's phone...</H3>");
+
+            channel.onmessage = onDcMessage;
+            chan = channel;
+        }
+        $(document).ready(function() {
+            Ipseorama.whoAmI(gotFinger, function(err) {
+                console.log("could not create identity " + err)
+            });
+        });
+    </script>
+    <h1>Sculpture remote access <br/>ask a |pipe| founder to scan this QR and let you in</h1>
+    <div width="90%" id="qr" class="qr">
+
+    </div>
+    <div id="result"> Then you'll be able to send morse code</div>
+
+
+
+</body>
+</html>

@@ -15,6 +15,7 @@
         var friendList = {};
         var mess ="";
         var imagen =0;
+        var img = new Image();
 
         var sha256 = require("js/sha256");
         function setFriend(fing){
@@ -43,7 +44,11 @@
                var jval = JSON.parse(mess);
                mess="";
                var framedata = 'data:image/jpeg;base64,' +jval.frame;
-               $('#camera').attr("src",framedata);
+               img.onload = function(){
+                   var ctx = document.getElementById('camera').getContext('2d');
+                   ctx.drawImage(img, 0, 0);
+               }
+               img.src=framedata;
                console.log("got image"+imagen++);
 	       window.setTimeout( function(){
 	          var message = {command: "read"};
@@ -85,7 +90,7 @@
     </div>
 
     <h3>Output</h3>
-    <img id="camera" width="640" height="360"/>
+    <canvas id="camera" width="640" height="360"/>
 
 </body>
 </html>

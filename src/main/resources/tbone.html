@@ -57,13 +57,22 @@
             var channel = ipsed.createDataChannel("thermal_zone0", {});
             channel.onopen = function() {
                 console.log("Outbound channel ");
-                var message = {command: "start"};
-                channel.send(JSON.stringify(message));
+                window.setTimeout( function(){
+                   var message = {command: "start"};
+                   if (chout != null){
+                       chout.send(JSON.stringify(message));
+                   }
+                },200);
                 var bhigh = [{from: -20.0, to: 0.0, color: '#e00'}, {from: 0.0, to: 30.0, color: '#ccc'}, {from: 30.0, to: 50.0, color: '#0a0'}];
                 battery = makeGauge("Temperature", -20.0, 50.0, "degC", "Sensor", [-20.0, -10.0, 0.0, 10.0, 20.0, 30.0, 40.0, 50.0], {int: 2, dec: 1}, 1000.0, bhigh);
                 $("input").hide();
 
             };
+            channel.onclose = function() {
+                console.log("closing channel");
+		$("#gaugeContainer").hide();                
+                chout=null;
+            }
             channel.onmessage = onDcMessage;
             chout = channel;
         }

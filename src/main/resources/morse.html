@@ -1,0 +1,217 @@
+<html><head><title>Morse Pipes</title></head>
+    <script src="js/require.js"></script>
+    <script src="js/jquery-1.8.3.js"></script>
+    <script src="js/phono.sdp.js"></script>
+    <script src="js/ipseorama.js"></script>
+    <script src="js/dc.js"></script>
+    <script src="js/adapter.js"></script>
+
+    <script type="text/javascript">
+				var myFinger = undefined;
+				var ipsed = null;
+				var channel;
+				var LEDCOUNT = 45;
+				var redevous = "wss://pi.pe/websocket/?finger=";
+				var allwhite = [];
+				var allblack = [];
+				var dit = 100;
+				var da = dit * 3;
+                                var gain;
+				var alphabet = {
+				  'a': '.-',
+				  'b': '-...',
+				  'c': '-.-.',
+				  'd': '-..',
+				  'e': '.',
+				  'f': '..-.',
+				  'g': '--.',
+				  'h': '....',
+				  'i': '..',
+				  'j': '.---',
+				  'k': '-.-',
+				  'l': '.-..',
+				  'm': '--',
+				  'n': '-.',
+				  'o': '---',
+				  'p': '.--.',
+				  'q': '--.-',
+				  'r': '.-.',
+				  's': '...',
+				  't': '-',
+				  'u': '..-',
+				  'v': '...-',
+				  'w': '.--',
+				  'x': '-..-',
+				  'y': '-.--',
+				  'z': '--..',
+				  ' ': '/',
+				  '1': '.----',
+				  '2': '..---',
+				  '3': '...--',
+				  '4': '....-',
+				  '5': '.....',
+				  '6': '-....',
+				  '7': '--...',
+				  '8': '---..',
+				  '9': '----.',
+				  '0': '-----',
+				}
+        var nonceS;
+
+        var sha256 = require("js/sha256");
+        function setFriend(fing) {
+            showOnly(fing);
+            makedc(fing);
+        }
+        function showOnly(fing) {
+            Ipseorama.dbListPrint(function(friends) {
+                var pics = "<ul>";
+                friends.forEach(function(fr) {
+                    if (fr.finger === fing) {
+                        pics += "<li><img src='" + fr.tag + "'/>Connecting...</li>";
+                    }
+                });
+                pics += "</ul>";
+                $('#friendList').html(pics);
+            }
+            );
+        }
+        function showFriends(friends) {
+            var pics = "<ol>";
+            friends.forEach(function(fr) {
+                pics += "<li><img src='" + fr.tag + "' onclick=\"setFriend('" + fr.finger + "');\"/></li>";
+            });
+            pics += "</ol>";
+            $('#friendList').html(pics);
+        }
+        function gotFinger(finger) {
+            myFinger = finger;
+            ipsed = new IpseDataChannel(finger);
+            Ipseorama.dbListPrint(showFriends);
+        }
+
+				function fillall(pno) {
+        	allwhite = [];
+				  allblack = [];
+				  var white = parseInt("0xffffff");
+				  var black = parseInt("0x0");
+				  for (var i = 0; i < LEDCOUNT; i++) {
+				    allblack.push(black);
+				    if ((!pno) || (pno === Math.floor(i / 3))) {
+				      allwhite.push(white);
+				    } else {
+				      allwhite.push(black);
+				    }
+				  }
+				}
+
+				function update(values,when) {
+				  var message = {
+				    command: "paint",
+				    pixels: values
+				  };
+                                  if (when){
+                                    message.at = ""+(dit+when);
+				  }
+				  channel.send(JSON.stringify(message));
+				  console.log(JSON.stringify(message));
+				}
+
+				function soundOff() {
+                                  if(gain) {
+                                      gain.gain.value =0.0
+                                  }
+				}
+
+				function soundOn() {
+                                  if(gain) {
+                                      gain.gain.value =1.0
+                                  }
+				}
+
+				function sendMessage(codeS) {
+				  soundOff();
+                                  update(allblack);
+				  var next = 0;
+				  var code = codeS.split('');
+				  var now = Date.now();
+				  code.forEach(function(c) {
+				    switch (c) {
+				      case '.':
+				        setTimeout(soundOn, next);
+ 					update(allwhite,now+next);
+				        next += dit;
+				        setTimeout(soundOff, next);
+ 					update(allblack,now+next);
+				        next += dit;
+				        break;
+				      case '-':
+				        setTimeout(soundOn, next);
+ 					update(allwhite,now+next);
+				        next += da;
+				        setTimeout(soundOff, next);
+ 					update(allblack,now+next);
+				        next += dit;
+				        break;
+				      case ' ':
+				        next += da;
+				        break;
+				      case '/':
+				        next += da + da + dit;
+				        break;
+				    }
+				  });
+				}
+
+				function sendMorse(m) {
+				  var morse = m.split('').map(function(e) {
+				    return alphabet[e.toLowerCase()] || '';
+				  }).join(' ');
+				  sendMessage(morse);
+				  console.log(morse);
+				}
+
+				function sendPipe() {
+				  sendMorse(" pipe pipe pipe ");
+				}
+
+
+				function makedc(tofinger) {
+				  ipsed.setTo(tofinger);
+				  channel = ipsed.createDataChannel("opc:127.0.0.1:7890", {});
+				  channel.onopen = function() {
+				    $('#pressme').show();
+				    $('#pressme').click(sendPipe);
+                                    $('#friendList').hide();
+				  };
+				  channel.onmessage = function(message) {};
+				  channel.onclose = function() {};
+				}
+				function bleeper() {
+				  var context = new(window.AudioContext || window.webkitAudioContext());
+				  var oscillator = context.createOscillator();
+				  gain = context.createGain();
+				  oscillator.frequency.value = 750;
+				  oscillator.connect(gain);
+				  gain.connect(context.destination);
+                                  gain.gain.value = 0.0;
+				  oscillator.start(0);
+				}
+
+				$(document).ready(function() {
+				  Ipseorama.whoAmI(gotFinger, function(err) {
+				    console.log("could not create identity " + err);
+				  });
+                                  
+				  $('#pressme').hide();
+				  fillall();
+                                  bleeper();
+				});
+</script>
+<h1>Send Morse code to the sculpture</h1>
+    <div id="friendList">
+
+    </div>
+<input style="font-size: xx-large;" id="pressme" type="button" value="Send" />
+</body>
+</html>

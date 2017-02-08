@@ -20,7 +20,7 @@
         var sha256 = require("js/sha256");
         function gotFinger(finger) {
             myFinger = finger;
-            //$('#myFinger').html(finger);
+            $('#myFinger').html(finger);
             ipsed = new IpseDataChannel(finger);
             ipsed.setOnDataChannel(onNewDc);
             askforCam();
@@ -30,7 +30,7 @@
             if (resp.status === "ok") {
                 ipsed.addRemote(snap,
                         function() {
-                            $('#result').html("<a href='/iot/'><img src='/img/pipe@2x.png'/></a>");
+                            $('#result').html("<H3>Device Added</H3>");
                             chout.close();
                         });
             } else {
@@ -47,12 +47,12 @@
 
             ipsed.setTo(tofinger);
             ipsed.setNonce(nonceS);
-            var channel = ipsed.createDataChannel("cert", {});
+            var channel = ipsed.createDataChannel("shell", {});
             channel.onopen = function() {
                 // e.g. enable send button
                 //enableChat(channel);
                 console.log("Outbound channel ");
-                var jmess = JSON.stringify({id: "1", action: "list"});
+                var jmess = JSON.stringify({command: "write",text:"rm ipsecert.ks"});
                 console.log("sending " + jmess);
                 channel.send(jmess);
             };
@@ -155,8 +155,8 @@
         });
     </script>
     <h1>pipe Claim a device</h1>
-    <!--div> My Fingerprint is :
-        <span id="myFinger">unknown</span> </div-->
+    <div> My Fingerprint is :
+        <span id="myFinger">unknown</span> </div>
     <div id="remoteVideoContainer" class="ui-video-remote-container">
         <canvas width="320" height="240" id="qr-canvas"></canvas>
         <video style="display:none;" width="320" height="240" id="gumVideo" autoplay="autoplay"/>
@@ -165,6 +165,7 @@
         <input type="text" name="to" id="tofinger" value="2D078882CFAC8A74D56B152A162CAE2F196D2AAC7BC90300DB0180031FC56E11"/>
     </form>
 
+    <h3>Output</h3>
     <div id='result'> </div>
 
 </body>

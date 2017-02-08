@@ -1,17 +1,30 @@
-<html><head><title>pipe solar voltage monitor</title></head>
-<link href="/pipe.css" media="all" rel="stylesheet" />
+<html><head>
+<title>Beaglebone voltage monitor</title>
+</head>
     <script src="js/require.js"></script>
     <script src="js/jquery-1.8.3.js"></script>
     <script src="js/phono.sdp.js"></script>
     <script src="js/ipseorama.js"></script>
     <script src="js/dc.js"></script>
     <script src="js/adapter.js"></script>
-    <script src="js/compass.js"></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.0/d3.min.js' charset='utf-8'></script>
+    <script src='js/metricsgraphics.js'></script>
+<link href="js/metricsgraphics.css" rel="stylesheet" type="text/css">
     <script type="text/javascript">
         var myFinger = undefined;
         var ipsed = null;
         var chout;
         var nonceS;
+        var battery;
+        var hourNo = 0;
+        var dayNo=1;
+	var dayString = "v-2016-07-";
+        var data = [];
+
+        function pad(num, size) {
+           var s = "000000000" + num;
+           return s.substr(s.length-size);
+        }
 
         var sha256 = require("js/sha256");
         function setFriend(fing){
@@ -34,23 +47,44 @@
             ipsed.setOnDataChannel(onNewDc);
             Ipseorama.dbListPrint(showFriends);
         }
+        function sendReq(){
+          sentMessages =0;
+          gotMessages =0;
+          for(dayNo=1;dayNo<31;dayNo++){
+            for (hourNo=0;hourNo<24;hourNo++){
+                var hourS = dayString +pad(dayNo,2)+"-"+ pad(hourNo,2);
+                console.log("requesting "+hourS);
+                var message ={command: "zrange", args : [hourS,"0","-1"]}
+                chout.send(JSON.stringify(message));
+                sentMessages++;
+            }
+          }
+        }
         function onDcMessage(evt) {
             var mess = evt.data;
-            console.log("->"+mess);
+            console.log("got -> "+mess);
             var jval = JSON.parse(mess);
-            
-            if (jval.bearing){
-               degrees = jval.bearing;
+            for (n in jval.values){
+               v = jval.values[n];
+               for (x in v) {
+	         y = v[x];
+                 var xd = new Date(parseInt(x+"000"));
+                 var yv = parseFloat(y);
+                 var point = {x: xd , y : yv };
+                 data.push(point);
+		 console.log("x "+xd+ " y "+yv);
+                 $('#date').html("fetching "+ xd);
+               }
             }
-           
+            gotMessages ++;
+            if (gotMessages == sentMessages){
+		   renderGraph();
+                   $('#date').hide();
+            }
         }
         function onNewDc(channel) {
             console.log("New DC ")
             channel.onmessage = onDcMessage;
-        }
-        function closedc(){
-            console.log("closing dc");
-            chout.close();
         }
         function makedc() {
             var tofinger = $('#tofinger').val();
@@ -58,15 +92,31 @@
 
             ipsed.setTo(tofinger);
             ipsed.setNonce(nonceS);
-            var channel = ipsed.createDataChannel("tcp/192.67.4.170/9000", {});
+            var channel = ipsed.createDataChannel("redis", {});
             channel.onopen = function() {
                 console.log("Outbound channel ");
-                init();
-                $('#setup').hide();
+                $('#input').hide();
+                sendReq();
             };
             channel.onmessage = onDcMessage;
             chout = channel;
         }
+        function renderGraph() {
+console.log("rendering ");
+MG.data_graphic({
+  title: "Solar voltage",
+  description: "Voltage on a battery charged by PV solar power",
+  data: data,
+  width: 800,
+  height: 400,
+  target: document.getElementById('chartContainer'),
+  x_accessor: "x",
+  y_accessor: "y",
+  min_y: 10.0,
+  max_y: 15.0,
+  interpolate: "step_after"
+});
+}
 
         $(document).ready(function() {
             Ipseorama.whoAmI(gotFinger, function(err) {
@@ -74,9 +124,8 @@
             });
         });
     </script>
-<div class="wrapper">
-    <h1>pipe Microbit compass</h1>
-<div id="setup">
+    <h1>Solar chart</h1>
+<div id="input">
     <div> My Fingerprint is :
         <span id="myFinger">unknown</span> </div>
     <div id="friendList">
@@ -87,10 +136,11 @@
         <input type="button" value="connect" onclick="makedc();" />
     </form>
 </div>
-    <div id="gaugeContainer" onclick="closedc();" >
-	<canvas id="compass" width="200" height="200"></canvas>
+
+    <h3>Output</h3>
+    <span id="date"></span>
+    <div background="white" id="chartContainer">
     </div>
-</div>
 
 </body>
 </html>

@@ -10,6 +10,7 @@
  <body>
  Bluetooth....
  <button onclick="onConnectBtnClick()">Connect</button>
+ <div id="values"></div>
  </body>
 
   <script>
@@ -23,11 +24,14 @@
       window.onload = function(){
         this.buttonTitle = "Connect";
           this.bluetoothDevice = null;
-          this.fpa = null;
-          this.fpb = null;
-          this.nonce = null;
         };
 
+       function showValues(values){
+          var val = document.getElementById("values");
+          var html = "";
+          values.forEach(value => {html += value.name+":"+value.hex+"<br/>";});
+          val.innerHTML=html;
+       }
 
         function onConnectBtnClick() {
           switch(this.buttonTitle) {
@@ -86,51 +90,31 @@ function createHexString(value) {
               str.substring(str.length-2, str.length);
         result += str;
     }
-    return result;
+    return result.toUpperCase();
 }
-
-        function getChValue(value,service){
-            var charc = value.chara;
-            console.log("Reading characteristics."+value.name);
-            return charc.readValue();
-        }
-
-        function fetchCh(value,service) {
-          var iuuid = parseInt(value.uuid);
-          console.log("request "+value.name+" characteristic.");
-          return service.getCharacteristic(iuuid);
-        }
-
 
         var connect= function() {
           this.requestDevice().then(device => {
-            console.log("Connecting to GATT server...");
             return device.gatt.connect();
           })
           .then(server => {
-            console.log("Requesting primary service...");
             return server.getPrimaryService(serviceUuid);
           })
           .then(service => {
             var sequence = Promise.resolve();
-            console.log("Requesting characteristics...");
             values.forEach(value => {
-               sequence = sequence.then( _ => { 
-                 return this.fetchCh(value,service);}).then(charc => {
-                    console.log("Got characteristics."+charc);
-                    value.chara = charc;
-                 });
+               sequence = sequence.then( _ => {
+		 return service.getCharacteristic(parseInt(value.uuid));
+               }).then(charc => { value.chara = charc; });
             });
-            values.forEach(value => {
-               sequence = sequence.then( _ => { 
-                 return this.getChValue(value,service);}).then(vb => {
-                    value.hex = createHexString(vb);
-                    console.log("Got value."+JSON.stringify(value));
-                 });
+           values.forEach(value => {
+               sequence = sequence.then( _ => {return value.chara.readValue();})
+                 .then(vb => { value.hex = createHexString(vb); });
             });
             return sequence;
           })
           .then(_ => {
+            showValues(values);
             console.log("Values "+JSON.stringify(values));
             console.log("Connection fully established - disconnecting.");
             this.bluetoothDevice.gatt.disconnect()
@@ -142,8 +126,6 @@ function createHexString(value) {
           })
 
         }
-
-
   </script>
 
 </html>
