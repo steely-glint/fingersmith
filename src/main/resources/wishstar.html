@@ -1,0 +1,229 @@
+<html><head><title>Starway Baby</title></head>
+    <!--script src=""></script>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script-->
+    <script src="js/require.js"></script>
+    <script src="js/jquery-1.8.3.js"></script>
+    <script src="js/phono.sdp.js"></script>
+    <script src="js/ipseorama.js"></script>
+    <script src="js/dc.js"></script>
+    <script src="js/LazarQr.min.js"></script>
+    <script src="js/adapter.js"></script>
+
+    <script type="text/javascript">
+var SpeechRecognition = SpeechRecognition || webkitSpeechRecognition
+var SpeechGrammarList = SpeechGrammarList || webkitSpeechGrammarList
+var SpeechRecognitionEvent = SpeechRecognitionEvent || webkitSpeechRecognitionEvent
+
+var grammar = '#JSGF V1.0; grammar colors; public <color> = blue | orange | red | yellow ;'
+var recognition = new SpeechRecognition();
+var speechRecognitionList = new SpeechGrammarList();
+speechRecognitionList.addFromString(grammar, 1);
+recognition.grammars = speechRecognitionList;
+//recognition.continuous = false;
+recognition.lang = 'en-US';
+recognition.interimResults = false;
+recognition.maxAlternatives = 1;
+
+
+var diagnostic = document.querySelector('.output');
+var bg = document.querySelector('.speak');
+function setupRec(){
+	diagnostic = document.querySelector('.output');
+	bg = document.querySelector('.speak');
+	bg.onclick = function() {
+	  recognition.start();
+	  console.log('Ready to receive a color command.');
+	}
+}
+
+recognition.onresult = function(event) {
+  // The SpeechRecognitionEvent results property returns a SpeechRecognitionResultList object
+  // The SpeechRecognitionResultList object contains SpeechRecognitionResult objects.
+  // It has a getter so it can be accessed like an array
+  // The first [0] returns the SpeechRecognitionResult at position 0.
+  // Each SpeechRecognitionResult object contains SpeechRecognitionAlternative objects that contain individual results.
+  // These also have getters so they can be accessed like arrays.
+  // The second [0] returns the SpeechRecognitionAlternative at position 0.
+  // We then return the transcript property of the SpeechRecognitionAlternative object 
+  var color = event.results[0][0].transcript;
+  diagnostic.textContent = 'Result received: ' + color + '.';
+  bg.style.backgroundColor = color;
+  console.log(color + ' Confidence: ' + event.results[0][0].confidence);
+  var bits = color.toLowerCase().split(" ");
+  var sz = bits[0].substring(0,1);
+  var col = bits[1].substring(0,1);
+  var starname  =sz+col; 
+  var starno = namemap.findIndex(function(v){ return v === starname;});
+  console.log("star name ="+starname+" star no ="+starno);
+  if (starno >= 0){
+     star(starno);
+  }
+}
+
+recognition.onspeechend = function() {
+  recognition.stop();
+}
+
+recognition.onnomatch = function(event) {
+  diagnostic.textContent = 'I didnt recognise that color.';
+}
+
+recognition.onerror = function(event) {
+  diagnostic.textContent = 'Error occurred in recognition: ' + event.error;
+}
+
+        var myFinger = undefined;
+        var ipsed = null;
+        var chout;
+        var nonceS;
+
+        var sha256 = require("js/sha256");
+        function setFriend(fing) {
+            showOnly(fing);
+            makedc(fing);
+        }
+        function showOnly(fing) {
+            Ipseorama.dbListPrint(function(friends) {
+                var pics = "<ul>";
+                friends.forEach(function(fr) {
+                    if (fr.finger === fing) {
+                        pics += "<li><img src='" + fr.tag + "'/>Connecting...</li>";
+                    }
+                });
+                pics += "</ul>";
+                $('#friendList').html(pics);
+            }
+            );
+        }
+        function showFriends(friends) {
+            var pics = "<ol>";
+            friends.forEach(function(fr) {
+                pics += "<li><img src='" + fr.tag + "' onclick=\"setFriend('" + fr.finger + "');\"/></li>";
+            });
+            pics += "</ol>";
+            $('#friendList').html(pics);
+        }
+        function gotFinger(finger) {
+            myFinger = finger;
+            $('#myFinger').html(finger);
+            ipsed = new IpseDataChannel(finger);
+            ipsed.setOnDataChannel(onNewDc);
+            Ipseorama.dbListPrint(showFriends);
+            $('#star').hide();
+        }
+        function onDcMessage(evt) {
+            var mess = evt.data;
+            var jval = JSON.parse(mess);
+        }
+        function onNewDc(channel) {
+            console.log("New DC ")
+            channel.onmessage = onDcMessage;
+        }
+        function setOnePixel(num, pixc) {
+            var message = {command: "paint"};
+            var values = [];
+            for (var i = 0; i < 24; i++) {
+                var c = 0;
+                if (i == num) {
+                    c = pixc;
+                }
+                values.push(c);
+            }
+            message.pixels = values;
+            return message;
+        }
+        var ipsechan = null;
+
+        function makedc(tofinger) {
+            console.log("setting toFinger" + tofinger);
+            ipsed.setTo(tofinger);
+            ipsed.setNonce(nonceS);
+            var channel = ipsed.createDataChannel("opc:192.67.4.18:7890", {});
+            //var tick;
+            channel.onopen = function() {
+                console.log("Outbound channel ");
+                $('#friendList').hide();
+                $('#star').show();
+                ipsechan = channel;
+                setupRec();
+            };
+            channel.onmessage = onDcMessage;
+            channel.onclose = function() {
+                //clearInterval(tick);
+                $('#friendList').show();
+                ipsechan = null;
+            }
+            chout = channel;
+        }
+        var namemap = ['bb', 'bo', 'br', 'so', 'sy', 'sr', 'by', 'my', 'mr', 'mb', 'mo', 'sb'];
+
+        var starmap = {
+            br: [0, 1, 2],
+            mr: [3, 4],
+            sr: [5],
+            by: [6, 7, 8],
+            my: [9, 10],
+            sy: [11],
+            bo: [12, 13, 14],
+            mo: [15, 16],
+            so: [17],
+            bb: [18, 19, 20],
+            mb: [21, 22],
+            sb: [23]
+        };
+        function star(starno, area) {
+            var pixc = 0xffffff;
+            var starname = namemap[starno];
+            if (starname === 'un') {
+                console.log("starno " + starno + " unmapped");
+            } else {
+                var values = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+                var starA = starmap[starname];
+                for (var index = 0; index < starA.length; index++) {
+                    var led = starA[index];
+                    values[led] = pixc;
+                }
+                var message = {command: "paint"};
+                message.pixels = values;
+                ipsechan.send(JSON.stringify(message));
+            }
+        }
+
+        $(document).ready(function() {
+            Ipseorama.whoAmI(gotFinger, function(err) {
+                console.log("could not create identity " + err);
+            });
+        });
+    </script>
+    <h1>Starway Baby</h1>
+    <div> My Fingerprint is :
+        <span id="myFinger">unknown</span> </div>
+    <div id="friendList">
+
+    </div>
+
+
+    <h3>Output</h3>
+    <div id='star'>
+<iframe src="https://appear.in/pipeastricon" width="800" height="640" frameborder="0"></iframe>    
+</div>
+    <!--
+    br -> sr
+    mr -> sy
+    sr -> sb
+    bb -> br
+    mb -> bo
+    sb -> so
+    by -> by
+    my -> my
+    sy -> mb
+    bo -> mr
+    mo -> mo
+    so -> bb
+   --> 
+    <p class="speak">Click here, then say a size and color of your chosen star. For example "big red star" or "small orange star" or "medium yellow star"</p>
+    <div>
+        <p class="output"><em>...diagnostic messages</em></p>
+    </div>
+    </body>
+    </html>
