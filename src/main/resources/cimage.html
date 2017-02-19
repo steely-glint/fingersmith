@@ -16,6 +16,7 @@
         var mess ="";
         var imagen =0;
         var img = new Image();
+        var when =0;
 
         var sha256 = require("js/sha256");
         function setFriend(fing){
@@ -38,6 +39,11 @@
             ipsed.setOnDataChannel(onNewDc);
             Ipseorama.dbListPrint(showFriends);
         }
+        function showSpeed(){
+            var ticks = Date.now() - when;
+            var rate = (1000.0 * imagen) / ticks;
+            console.log("rate = "+rate);
+        }
         function onDcMessage(evt) {
             mess +=evt.data;
             if (mess.endsWith("}")){
@@ -49,7 +55,11 @@
                    ctx.drawImage(img, 0, 0);
                }
                img.src=framedata;
-               console.log("got image"+imagen++);
+               if(jval.framecount) {
+                   console.log("framecount "+jval.framecount);
+               }
+               console.log("got image "+imagen++);
+               showSpeed();
 	       window.setTimeout( function(){
 	          var message = {command: "read"};
                   chout.send(JSON.stringify(message));
@@ -70,6 +80,7 @@
                 console.log("Outbound channel ");
                 var message = {command: "read"};
                 channel.send(JSON.stringify(message));
+                when = Date.now();
                 $('#friendList').hide();
                 $('#camera').show();
             };

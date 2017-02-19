@@ -81,7 +81,7 @@ function stringToArrayBuffer(str){
             
             function onDcMessage(evt) {
                 var mess = arrayBufferToString(evt.data);
-                console.log(">"+mess);
+//                console.log(""+Date.now()+">"+mess);
                 term.write(mess);
             }
             function onNewDc(channel) {
@@ -89,7 +89,7 @@ function stringToArrayBuffer(str){
                 channel.onmessage = onDcMessage;
             }
             function sendLine(value) {
-                console.log("<"+value);
+//                console.log(""+Date.now()+"<"+value);
                 ipsechan.send(stringToArrayBuffer(value));
             }
             var ipsechan = null;
@@ -107,6 +107,8 @@ function stringToArrayBuffer(str){
                     term = new Term(80, 24, sendLine,fl);
                     term.open();
                     ipsechan = channel;
+                    sendLine("TERM=vt100 export TERM\r");
+                    sendLine("date\r");
                 };
                 channel.onmessage = onDcMessage;
                 channel.onclose = function() {

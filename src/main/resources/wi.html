@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Bluetooth pairing</title>
+<!-- Origin Trial Token, feature = Web Bluetooth, origin = https://pi.pe, expires = 2017-01-24 -->
+<meta http-equiv="origin-trial" data-feature="Web Bluetooth" data-expires="2017-01-24" content="At+eFpPi6OI0oH0ycsTr4pwz9b/h0mMjhKIYL6MZtGuItXzc2cQq68CR9FEdAzwyetL+RHXiNuLdSgLcsW4hIA8AAABQeyJvcmlnaW4iOiAiaHR0cHM6Ly9waS5wZTo0NDMiLCAiZmVhdHVyZSI6ICJXZWJCbHVldG9vdGgiLCAiZXhwaXJ5IjogMTQ4NTMyMDM5OX0="/>
+
+      <script src="js/require.js"></script>
+      <script src="js/phono.sdp.js"></script>
+  </head>
+
+
+ <body>
+ Bluetooth....
+ <button onclick="onConnectBtnClick()">Connect</button>
+ <div id="values"></div>
+ </body>
+
+  <script>
+    var serviceUuid = parseInt("0x919E");
+function str2ab(str) {
+  var buf = new ArrayBuffer(str.length*2); // 2 bytes for each char
+  var bufView = new Uint16Array(buf);
+  for (var i=0, strLen=str.length; i<strLen; i++) {
+    bufView[i] = str.charCodeAt(i);
+  }
+  return buf;
+}
+function ab2str(buf) {
+  return String.fromCharCode.apply(null, new Uint16Array(buf));
+}
+
+    var values = [
+          {uuid:"0xFC0A",name:"ssid",value:str2ab("WA69NR2")} ,
+          {uuid:"0xFC0B",name:"psk",value:str2ab("asterisk")}
+    ];
+    
+      window.onload = function(){
+        this.buttonTitle = "Connect";
+          this.bluetoothDevice = null;
+        };
+
+       function showValues(values){
+          var val = document.getElementById("values");
+          var html = "";
+          values.forEach(value => {html += value.name+":"+ab2str(value.value)+"<br/>";});
+          val.innerHTML=html;
+       }
+        function onConnectBtnClick() {
+          switch(this.buttonTitle) {
+            case "Connect":
+              if (this.bluetoothDevice) {
+                console.log("Internal: Bluetooth device already exists.");
+              }
+              // Fall through
+            case "Reconnect":
+              this.connect();
+              break;
+            case "Disconnect":
+              if (!this.bluetoothDevice && !this.bluetoothDevice.gatt) {
+                console.log("Internal: No Bluetooth device or connection exists.");
+              }
+              this.bluetoothDevice.gatt.disconnect();
+              break;
+            default:
+              console.log("Internal: Wrong buttonTitle state!");
+          }
+        };
+
+        var onGATTDisconnected=  function() {
+          this.buttonTitle = "Reconnect";
+        }
+        var requestDevice= function() {
+          if (this.bluetoothDevice) {
+            console.log('Attempting to reconnect...')
+            return Promise.resolve(this.bluetoothDevice);
+          }
+
+          console.log('Requesting Bluetooth Device...');
+          return navigator.bluetooth.requestDevice({
+            filters: [
+              { name: 'Pipe' },
+              {services: [serviceUuid]}
+            ],
+          }).then(device => {
+            this.bluetoothDevice = device;
+            console.log('Got Bluetooth Device...');
+
+            device.addEventListener('gattserverdisconnected',
+              this.onGATTDisconnected.bind(this));
+            return device;
+          });
+        };
+        var connect= function() {
+          this.requestDevice().then(device => {
+            return device.gatt.connect();
+          })
+          .then(server => {
+            return server.getPrimaryService(serviceUuid);
+          })
+          .then(service => {
+            var sequence = Promise.resolve();
+            values.forEach(value => {
+               sequence = sequence.then( _ => {
+                 console.log("uuid "+JSON.stringify(value));
+		 return service.getCharacteristic(parseInt(value.uuid));
+               }).then(charc => { value.chara = charc; console.log("ch "+JSON.stringify(value)); });
+            });
+            values.forEach(value => {
+               sequence = sequence.then( _ => {return value.chara.writeValue(value.value);})
+                 .then(_ => {console.log("written "+value.name+" = "+value.value
+)});
+            });
+            return sequence;
+          })
+          .then(_ => {
+            showValues(values);
+            console.log("Values "+JSON.stringify(values));
+            console.log("Connection fully established - disconnecting.");
+            this.bluetoothDevice.gatt.disconnect()
+          })
+          .catch(err => {
+            this.bluetoothDevice = null;
+            console.log(err);
+
+          })
+
+        }
+  </script>
+</html>
