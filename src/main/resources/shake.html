@@ -194,14 +194,10 @@
             for (var i = 0; i != sources.length; ++i) {
                 var source = sources[i];
                 console.log(source);
-                if ((source.kind == "video") && (source.facing == "environment")) {
-                    sid = source.id;
-                    //break;
+                if ((source.kind == "videoinput") && (source.label.endsWith("back"))) {
+
+                    sid = source.deviceId;
                 }
-                // source.id -> DEVICE ID
-                // source.label -> DEVICE NAME
-                // source.kind = "audio" OR "video"
-                // TODO: add this to some datastructure of yours or a selection dialog
             }
             startGum(sid);
         }
@@ -209,10 +205,12 @@
             console.log("starting QR reader");
             //frontcam...
             var sid;
-            if ((typeof MediaStreamTrack === 'undefined') || (typeof MediaStreamTrack.getSources == 'undefined')) {
+            if ((typeof navigator.mediaDevices === 'undefined') 
+              || (typeof navigator.mediaDevices.enumerateDevices == 'undefined')){
                 startGum(sid);
             } else {
-                MediaStreamTrack.getSources(onSourcesAcquired);
+                navigator.mediaDevices.enumerateDevices().then(onSourcesAcquired);
+
             }
         }
         function gotFinger(finger) {
