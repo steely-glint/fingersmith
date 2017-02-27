@@ -19,8 +19,8 @@
   <script>
     var serviceUuid = parseInt("0x919E");
 function str2ab(str) {
-  var buf = new ArrayBuffer(str.length*2); // 2 bytes for each char
-  var bufView = new Uint16Array(buf);
+  var buf = new ArrayBuffer(str.length); 
+  var bufView = new Uint8Array(buf);
   for (var i=0, strLen=str.length; i<strLen; i++) {
     bufView[i] = str.charCodeAt(i);
   }
@@ -59,8 +59,8 @@ function createHexString(value) {
 
     var values = [
           {uuid:"0xFC0A",name:"status",read:true} ,
-          {uuid:"0xFC0B",name:"ssid",value:"WA69NR2",write:true} ,
-          {uuid:"0xFC0C",name:"psk",value:"asterisk",write:true},
+          {uuid:"0xFC0B",name:"ssid",value:localStorage.ssid,write:true} ,
+          {uuid:"0xFC0C",name:"psk",value:localStorage.psk,write:true},
           {uuid:"0xFC0D",name:"fpa",read:true} ,
           {uuid:"0xFC0E",name:"fpb",read:true} ,
           {uuid:"0xFC0F",name:"nonce",read:true}
