@@ -29,23 +29,49 @@ function str2ab(str) {
 function ab2str(buf) {
   return String.fromCharCode.apply(null, new Uint16Array(buf));
 }
+function createHexString(value) {
+    var result = "";
+    var arr = new Uint8Array(value.buffer);
+    for (i in arr) {
+        var str = arr[i].toString(16);
+        str = str.length == 0 ? "00" :
+              str.length == 1 ? "0" + str :
+              str.length == 2 ? str :
+              str.substring(str.length-2, str.length);
+        result += str;
+    }
+    return result.toUpperCase();
+}
+       function buildValues(vs){
+          var val = document.getElementById("values");
+          var html = "<table>";
+          vs.forEach(value => {
+              html += "<tr>";
+              html += "<td>"+value.name+"</td>";
+              html += "<td>"+value.uuid+"</td>";
+              html += "<td>"+((value.write)?"write":"read")+"</td>"; 
+              html += "<td id=\"val_"+value.name+"\">"+(value.value?value.value:"&nbsp;")+"</td>";
+              html += "</tr>";
+          });
+          html+= "</table>";
+          val.innerHTML=html;
+       }
 
     var values = [
-          {uuid:"0xFC0A",name:"ssid",value:str2ab("WA69NR2")} ,
-          {uuid:"0xFC0B",name:"psk",value:str2ab("asterisk")}
+          {uuid:"0xFC0A",name:"status",read:true} ,
+          {uuid:"0xFC0B",name:"ssid",value:"WA69NR2",write:true} ,
+          {uuid:"0xFC0C",name:"psk",value:"asterisk",write:true},
+          {uuid:"0xFC0D",name:"fpa",read:true} ,
+          {uuid:"0xFC0E",name:"fpb",read:true} ,
+          {uuid:"0xFC0F",name:"nonce",read:true}
     ];
     
       window.onload = function(){
         this.buttonTitle = "Connect";
           this.bluetoothDevice = null;
+          buildValues(values);
         };
 
-       function showValues(values){
-          var val = document.getElementById("values");
-          var html = "";
-          values.forEach(value => {html += value.name+":"+ab2str(value.value)+"<br/>";});
-          val.innerHTML=html;
-       }
         function onConnectBtnClick() {
           switch(this.buttonTitle) {
             case "Connect":
@@ -102,19 +128,27 @@ function ab2str(buf) {
             var sequence = Promise.resolve();
             values.forEach(value => {
                sequence = sequence.then( _ => {
-                 console.log("uuid "+JSON.stringify(value));
-		 return service.getCharacteristic(parseInt(value.uuid));
-               }).then(charc => { value.chara = charc; console.log("ch "+JSON.stringify(value)); });
+                 return service.getCharacteristic(parseInt(value.uuid));
+               }).then(charc => { value.chara = charc; });
             });
-            values.forEach(value => {
-               sequence = sequence.then( _ => {return value.chara.writeValue(value.value);})
-                 .then(_ => {console.log("written "+value.name+" = "+value.value
-)});
+           values.forEach(value => {
+               if (value.read){
+                 sequence = sequence.then( _ => {return value.chara.readValue();})
+                 .then(vb => { 
+                     value.value = createHexString(vb); 
+                     var td = document.getElementById("val_"+value.name);
+                     td.innerHTML = value.value;
+                 });
+               }
+               if (value.write){
+                  sequence = sequence.then( _ => {
+                    return value.chara.writeValue(str2ab(value.value));
+                  });
+               }
             });
             return sequence;
           })
           .then(_ => {
-            showValues(values);
             console.log("Values "+JSON.stringify(values));
             console.log("Connection fully established - disconnecting.");
             this.bluetoothDevice.gatt.disconnect()
@@ -126,5 +160,15 @@ function ab2str(buf) {
           })
 
         }
+ /*
+            values.forEach(value => {
+                 .then(_ => {console.log("written "+value.name+" = "+value.value
+)});
+            });
+            return sequence;
+          })
+ */
   </script>
+
+
 </html>
