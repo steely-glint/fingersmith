@@ -1,0 +1,35 @@
+<html>
+<head>
+<title> set wifi SSid and psk for your pipe devices</title>
+<script>
+var sside;
+var pske;
+window.onload = function(){
+  sside = document.getElementById("ssid");
+  pske = document.getElementById("psk");
+  if (localStorage.ssid){
+       sside.value = localStorage.ssid;
+  }
+  if (localStorage.psk){
+       pske.value = localStorage.psk;
+  }
+}
+function save(){
+     localStorage.psk = pske.value ;
+     localStorage.ssid = sside.value;
+}
+
+</script>
+</head>
+<body>
+<table>
+<tr><th>SSID</th><th>Key</th></tr>
+<tr>
+  <td><input type="text" id="ssid" size=16 /></td>
+  <td><input type="text" id="psk"  size=16 /></td>
+</tr>
+</table>
+<input type="button" value="save" onclick="save();"/>
+</body>
+</html>
+
