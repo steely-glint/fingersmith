@@ -1,0 +1,111 @@
+<html><head>
+<link href="/pipe.css" media="all" rel="stylesheet" />
+<title>show CPU temp</title></head>
+<body>
+    <script src="js/require.js"></script>
+    <script src="js/jquery-1.8.3.js"></script>
+    <script src="js/phono.sdp.js"></script>
+    <script src="js/pipeDb.js"></script>
+    <script src="js/pipeDuct.js"></script>
+    <script src="js/gauge.js"></script>
+    <script>
+    var duct = null;
+        var chout;
+        var cpu;
+
+        var sha256 = require("js/sha256");
+        function setFriend(fing){
+            $('#friendList').html("<hr/>");
+            makedc(fing);
+        }
+        function showFriends(friends){
+            var pics = "<ol>";
+            friends.forEach(function (fr){
+                pics += "<li><img src='"+fr.tag+"' onclick=\"setFriend('"+fr.finger+"');\"></li>";
+            });
+            pics += "</ol>";
+            $('#friendList').html(pics);
+        }
+        function gotFinger(id) {
+            duct = new PipeDuct(id);
+            duct.setOnDataChannel(onNewDc);
+            PipeDb.dbListPrint(showFriends);
+        }
+        function onDcMessage(evt) {
+            var mess = evt.data;
+            var jval = JSON.parse(mess);
+            if (!isNaN(jval.value)){
+               cpu.setValue(jval.value);
+            }
+        }
+        function onNewDc(channel) {
+            console.log("New DC ")
+            channel.onmessage = onDcMessage;
+        }
+        function makedc(deviceid) {
+            console.log("setting device" + deviceid);
+            duct.setTo(deviceid);
+            var channel = duct.createDataChannel("thermal_zone0", {});
+            channel.onopen = function() {
+                console.log("Outbound channel ");
+                window.setTimeout( function(){
+                   var message = {command: "start"};
+                   if (chout != null){
+                       chout.send(JSON.stringify(message));
+                   }
+                },200);
+                var bhigh = [{from: 0.0, to: 10.0, color: '#e00'}, {from: 10.0, to: 50.0, color: '#ccc'}, {from: 50.0, to: 70.0, color: '#0a0'}];
+                cpu = makeGauge("Temperature", 0.0, 70.0, "degC", "Sensor", [0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0], {int: 2, dec: 1}, 1000.0, bhigh);
+                $("input").hide();
+
+            };
+            channel.onclose = function() {
+                console.log("closing channel");
+		$("#gaugeContainer").hide();                
+                chout=null;
+            }
+            channel.onmessage = onDcMessage;
+            chout = channel;
+        }
+        function makeGauge(id, min, max, unit, title, ticks, format, zero, high) {
+            var opts = {
+                renderTo: id,
+                width: 300,
+                height: 300,
+                title: title,
+                minValue: min,
+                maxValue: max,
+                value: zero,
+                majorTicks: ticks,
+                animation: false,
+                //highlights: high,
+                //minorTicks - {Integer} - number of minor ticks to draw between major ticks on a gauge bar. Default is 10.
+                //strokeTicks - {Boolean} - the flag which identifies if the ticks bar should be stroked or not. By default is true.
+                units: unit,
+                valueFormat: format // { int : 4, dec : 0 }
+            };
+            var gauge = new Gauge(opts); // create sexy gauge!
+            gauge.draw();
+
+            return gauge;
+        }
+
+        $(document).ready(function() {
+            PipeDb.whoAmI(gotFinger, function(err) {
+                console.log("could not create identity " + err);
+            });
+        });
+    </script>
+    <div id="input">
+    <h1>pipe gauge</h1>
+    <div id="friendList">
+
+    </div>
+    </div>
+
+    <div id="gaugeContainer">
+        <canvas class="gauge" id="Temperature"></canvas>
+    </div>
+
+</body>
+</html>

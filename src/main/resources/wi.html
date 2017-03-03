@@ -7,6 +7,9 @@
 
       <script src="js/require.js"></script>
       <script src="js/phono.sdp.js"></script>
+      <script src="js/pipeDb.js"></script>
+      <script src="js/pipeDuct.js"></script>
+      <script src="js/claim.js"></script>
   </head>
 
 
@@ -14,6 +17,7 @@
  Bluetooth....
  <button onclick="onConnectBtnClick()">Connect</button>
  <div id="values"></div>
+ <div id="result"></div>
  </body>
 
   <script>
@@ -151,23 +155,27 @@ function createHexString(value) {
           .then(_ => {
             console.log("Values "+JSON.stringify(values));
             console.log("Connection fully established - disconnecting.");
-            this.bluetoothDevice.gatt.disconnect()
+            this.bluetoothDevice.gatt.disconnect();
+            PipeDb.whoAmI(function (id) {
+                gotId(id);
+                var vh = [];
+                setTimeout(function(){
+	           console.log("Trying to pair");
+                   values.forEach(value => {vh[value.name]=value.value;});
+                   var id = vh["fpa"]+vh["fpb"];
+                   var nonce = vh["nonce"];
+                   makedc(id,nonce);
+                },25000); 
+            }, function(err) {
+                 console.log("could not create identity " + err);
+            });
           })
           .catch(err => {
             this.bluetoothDevice = null;
             console.log(err);
 
           })
-
         }
- /*
-            values.forEach(value => {
-                 .then(_ => {console.log("written "+value.name+" = "+value.value
-)});
-            });
-            return sequence;
-          })
- */
   </script>
 
 
