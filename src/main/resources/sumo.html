@@ -1,22 +1,56 @@
-<html><head><title>Beaglebone voltage monitor</title></head>
-    <!--script src=""></script>
-<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script-->
+<html><head><title>Sumo</title></head>
+<style>
+.term {
+    font-family: courier,fixed,swiss,monospace,sans-serif;
+    font-size: 14px;
+    color: #f0f0f0;
+    background: #000000;
+}
+
+.termReverse {
+    color: #000000;
+    background: #00ff00;
+}
+#note {
+    font-size: 12px;
+}
+</style>
     <script src="js/require.js"></script>
     <script src="js/jquery-1.8.3.js"></script>
     <script src="js/phono.sdp.js"></script>
     <script src="js/ipseorama.js"></script>
     <script src="js/dc.js"></script>
+    <script src="js/term.js"></script>
     <script src="js/adapter.js"></script>
+
     <script type="text/javascript">
         var myFinger = undefined;
         var ipsed = null;
         var chout;
+        var termchan;
         var nonceS;
         var friendList = {};
         var mess ="";
         var imagen =0;
         var img = new Image();
         var when =0;
+function arrayBufferToString(buffer){
+    var arr = new Uint8Array(buffer);
+    var str = String.fromCharCode.apply(String, arr);
+    if(/[\u0080-\uffff]/.test(str)){
+        throw new Error("this string seems to contain (still encoded) multibytes");
+    }
+    return str;
+}
+function stringToArrayBuffer(str){
+    if(/[\u0080-\uffff]/.test(str)){
+        throw new Error("this needs encoding, like UTF-8");
+    }
+    var arr = new Uint8Array(str.length);
+    for(var i=str.length; i--; )
+        arr[i] = str.charCodeAt(i);
+    return arr.buffer;
+}
 
         var sha256 = require("js/sha256");
         function setFriend(fing){
@@ -70,6 +104,28 @@
             console.log("New DC ")
             channel.onmessage = onDcMessage;
         }
+            function onTermMessage(evt) {
+                var mess = arrayBufferToString(evt.data);
+                term.write(mess);
+            }
+            function sendLine(value) {
+                termchan.send(stringToArrayBuffer(value));
+            }
+
+            function maketerm() {
+                var channel = ipsed.createDataChannel("term", {});
+                //var tick;
+                channel.onopen = function() {
+                    termchan = channel;
+                    termchan.onmessage = onTermMessage;
+                    console.log("Terminal channel ");
+                    var fl = document.getElementById('terminal');
+                    term = new Term(80, 24, sendLine,fl);
+                    term.open();
+                    sendLine("TERM=vt100 export TERM\r");
+                    sendLine("./pilot.sh\r");
+                };
+            }
         function makedc(tofinger) {
             console.log("setting toFinger" + tofinger);
 
@@ -77,7 +133,7 @@
             ipsed.setNonce(nonceS);
             var channel = ipsed.createDataChannel("camera", {});
             channel.onopen = function() {
-                console.log("Outbound channel ");
+                console.log("Video channel ");
                 var message = {command: "read"};
                 channel.send(JSON.stringify(message));
                 when = Date.now();
@@ -86,6 +142,7 @@
             };
             channel.onmessage = onDcMessage;
             chout = channel;
+            maketerm();
         }
         $(document).ready(function() {
             Ipseorama.whoAmI(gotFinger, function(err) {
@@ -101,7 +158,9 @@
     </div>
 
     <h3>Output</h3>
+    <div id="terminal"></div>
     <canvas id="camera" width="640" height="360"/>
+
 
 </body>
 </html>
