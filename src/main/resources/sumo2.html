@@ -13,14 +13,41 @@
         var myFinger = undefined;
         var ipsed = null;
         var chout;
+        var framedata;
         var nonceS;
         var friendList = {};
-        var mess ="";
         var imagen =0;
         var img = new Image();
         var when =0;
         
         var sha256 = require("js/sha256");
+ // public method for encoding an Uint8Array to base64
+function encode (input) {
+    var keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+    var output = "";
+    var chr1, chr2, chr3, enc1, enc2, enc3, enc4;
+    var i = 0;
+
+    while (i < input.length) {
+        chr1 = input[i++];
+        chr2 = i < input.length ? input[i++] : Number.NaN; // Not sure if the index 
+        chr3 = i < input.length ? input[i++] : Number.NaN; // checks are needed here
+
+        enc1 = chr1 >> 2;
+        enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
+        enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
+        enc4 = chr3 & 63;
+
+        if (isNaN(chr2)) {
+            enc3 = enc4 = 64;
+        } else if (isNaN(chr3)) {
+            enc4 = 64;
+        }
+        output += keyStr.charAt(enc1) + keyStr.charAt(enc2) +
+                  keyStr.charAt(enc3) + keyStr.charAt(enc4);
+    }
+    return output;
+}
         function setFriend(fing){
             $('#tofinger').val(fing);
         }
@@ -46,41 +73,36 @@
             var rate = (1000.0 * imagen) / ticks;
             console.log("rate = "+rate);
         }
-        function onDcMessage(evt) {
-            mess +=evt.data;
-            if (mess.endsWith("}")){
-               var jval = JSON.parse(mess);
-               mess="";
-               var framedata = 'data:image/jpeg;base64,' +jval.frame;
-               img.onload = function(){
-                   var ctx = document.getElementById('camera').getContext('2d');
-                   ctx.drawImage(img, 0, 0);
-               }
-               img.src=framedata;
-               if(jval.framecount) {
-                   console.log("framecount "+jval.framecount);
-               }
-               console.log("got image "+imagen++);
-               showSpeed();
-	       window.setTimeout( function(){
-	          var message = {command: "read"};
-                  chout.send(JSON.stringify(message));
-               },50);
+        function onDcMessage(msg) {
+            var arrayBuffer = msg.data;
+            var bytes = new Uint8Array(arrayBuffer);
+            img.onload = function(){
+               var ctx = document.getElementById('camera').getContext('2d');
+               ctx.drawImage(img, 0, 0);
             }
+            img.src = 'data:image/jpeg;base64,'+encode(bytes);
+            imagen++;
+            showSpeed();
         }
         function onNewDc(channel) {
             console.log("New DC ")
             channel.onmessage = onDcMessage;
         }
         function button(l) {
-            var message = {command: "write",text:l};
-            console.log("Sending :"+JSON.stringify(message));
-            chout.send(JSON.stringify(message));
+            console.log("sending command "+l);
+            chout.send(l);
         }
         function setKpTarget(){
             var kp = document.getElementById("kp");
             kp.onkeydown = function(evt){ 
                  var key = String.fromCharCode(evt.keyCode).toLowerCase();
+                 switch (evt.keyCode){
+                   case 37: key='l';break;
+                   case 38: key='f';break;
+                   case 39: key='r';break;
+                   case 40: key='b';break;
+                   default: 
+                 }
                  button(key);
             };
             kp.onkeyup = function(evt){ 
@@ -93,11 +115,9 @@
 
             ipsed.setTo(tofinger);
             ipsed.setNonce(nonceS);
-            var channel = ipsed.createDataChannel("camera", {});
+            var channel = ipsed.createDataChannel("Sumo", {});
             channel.onopen = function() {
-                console.log("Video channel ");
-                var message = {command: "read"};
-                channel.send(JSON.stringify(message));
+                console.log("Sumo channel ");
                 when = Date.now();
                 $('#friendList').hide();
                 $('#camera').show();
@@ -108,6 +128,8 @@
             chout = channel;
         }
         $(document).ready(function() {
+            $('#controls').hide();
+
             Ipseorama.whoAmI(gotFinger, function(err) {
                 console.log("could not create identity " + err);
             });
@@ -123,23 +145,20 @@
     <h3>Output</h3>
     <canvas id="camera" width="640" height="360"></canvas>
 
-    <div id="controls" >
-        <input id="forwardButton" type="button" value="Forward" onclick="button('f')" class="control" >
+    <div id="controls" onmouseup="button('h');">
+        <input id="forwardButton" type="button" value="Forward" onmousedown="button('f')" class="control" >
             Forward&nbsp;
         </input>
-        <input  id="backButton" type="button" value="Back" onclick="button('b')" class="control" >
+        <input  id="backButton" type="button" value="Back" onmousedown="button('b')" class="control" >
             Back&nbsp;
         </input>
-        <input  id="leftButton" type="button" value="Left" onclick="button('l')" class="control" >
+        <input  id="leftButton" type="button" value="Left" onmousedown="button('l')" class="control" >
             Left&nbsp;
         </input>
-        <input  id="rightButton" type="button" value="Right" onclick="button('r')" class="control" >
+        <input  id="rightButton" type="button" value="Right" onmousedown="button('r')" class="control" >
             Right&nbsp;
         </input>
-        <input  id="haltButton" type="button" value="Halt" onclick="button('h')" class="control" >
-            Halt&nbsp;
-        </input>
-        <input  id="jumpButton" type="button" value="Jump" onclick="button('j')" class="control" >
+        <input  id="jumpButton" type="button" value="Jump" onmousedown="button('j')" class="control" >
             Jump&nbsp;
         </input>
     </div>
