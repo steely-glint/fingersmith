@@ -145,20 +145,20 @@ function encode (input) {
     <h3>Output</h3>
     <canvas id="camera" width="640" height="360"></canvas>
 
-    <div id="controls" onmouseup="button('h');">
+    <div id="controls" onmouseup="button('h');" ontouchend="button('h')" >
         <input id="forwardButton" type="button" value="Forward" onmousedown="button('f')" class="control" >
             Forward&nbsp;
         </input>
-        <input  id="backButton" type="button" value="Back" onmousedown="button('b')" class="control" >
+        <input  id="backButton" type="button" value="Back" onmousedown="button('b')" ontouchstart="button('b');" class="control" >
             Back&nbsp;
         </input>
-        <input  id="leftButton" type="button" value="Left" onmousedown="button('l')" class="control" >
+        <input  id="leftButton" type="button" value="Left" onmousedown="button('l')" ontouchstart="button('l');" class="control" >
             Left&nbsp;
         </input>
-        <input  id="rightButton" type="button" value="Right" onmousedown="button('r')" class="control" >
+        <input  id="rightButton" type="button" value="Right" onmousedown="button('r')" ontouchstart="button('r');" class="control" >
             Right&nbsp;
         </input>
-        <input  id="jumpButton" type="button" value="Jump" onmousedown="button('j')" class="control" >
+        <input  id="jumpButton" type="button" value="Jump" onmousedown="button('j')" ontouchstart="button('j');" class="control" >
             Jump&nbsp;
         </input>
     </div>

@@ -82,11 +82,7 @@ PipeDuct.prototype.makeWs = function () {
                 };
                 console.log("adding candidate " + JSON.stringify(jc));
                 var nc = "Huh? ";
-                if (typeof mozRTCIceCandidate == "function") {
-                    nc = new mozRTCIceCandidate(jc);
-                } else {
-                    nc = new RTCIceCandidate(jc);
-                }
+                nc = new RTCIceCandidate(jc);
                 pc.addIceCandidate(nc);
             }
             if ((data.type == 'offer') || (data.type == 'answer')) {
@@ -94,11 +90,7 @@ PipeDuct.prototype.makeWs = function () {
                 console.log("sent sdp is " + sdp);
                 var message = {'sdp': sdp, 'type': data.type};
                 var rtcd;
-                if (typeof mozRTCSessionDescription == "function") {
-                    rtcd = new mozRTCSessionDescription(message);
-                } else {
-                    rtcd = new RTCSessionDescription(message);
-                }
+                rtcd = new RTCSessionDescription(message);
                 console.log("rtcd is " + rtcd);
                 pc.setRemoteDescription(rtcd, function () {
                     console.log("set " + data.type + " ok");
@@ -254,8 +246,9 @@ PipeDuct.prototype.setOnDataChannel = function (callback) {
 PipeDuct.prototype.sendSDP = function (pc) {
     var sdpObj = Phono.sdp.parseSDP(pc.localDescription.sdp);
     console.log("this.toFinger:" + this.toFinger);
-    this.nonsense = sha256.hash(this.toFinger + ":" + this.nonceS + ":" + this.myFinger).toUpperCase();
-    // add sha256 here in a moment.
+    if (this.nonceS){
+          this.nonsense = sha256.hash(this.toFinger + ":" + this.nonceS + ":" + this.myFinger).toUpperCase();
+    } 
     var sdpcontext = {
         "to": this.toFinger,
         "from": this.myFinger,

@@ -2,7 +2,6 @@
 <link href="/pipe.css" media="all" rel="stylesheet" />
 <title>show CPU temp</title></head>
 <body>
-    <script src="js/require.js"></script>
     <script src="js/jquery-1.8.3.js"></script>
     <script src="js/phono.sdp.js"></script>
     <script src="js/pipeDb.js"></script>
@@ -13,7 +12,6 @@
         var chout;
         var cpu;
 
-        var sha256 = require("js/sha256");
         function setFriend(fing){
             $('#friendList').html("<hr/>");
             makedc(fing);

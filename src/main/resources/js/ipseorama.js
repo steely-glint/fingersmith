@@ -191,6 +191,7 @@ if (!window.indexedDB) {
             tx.oncomplete = function() {
                 Ipseorama.dbDone();
                 console.log("transaction done .");
+                prints.sort(function(a,b){ return b.timestamp - a.timestamp;});
                 doneCB(prints);
             };
             var store = tx.objectStore("IpseFinger");
@@ -202,6 +203,7 @@ if (!window.indexedDB) {
                     cursor.continue();
                 }
             };
+
         },
         openDb: function(app, action, doneCB) {
             if (Ipseorama.db == null) {

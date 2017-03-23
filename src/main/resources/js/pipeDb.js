@@ -34,9 +34,9 @@ if (!window.indexedDB) {
         },
         dbDone: function() {
             if (PipeDb.db != null) {
-                console.log("close db");
-                PipeDb.db.close();
-                PipeDb.db = null;
+                console.log("dont close db");
+//                PipeDb.db.close();
+//                PipeDb.db = null;
             }
         },
         createCert: function(app, doneCB) {
@@ -73,15 +73,19 @@ if (!window.indexedDB) {
         },
         findOrCreateCert: function(app, doneCB) {
             var tx = PipeDb.db.transaction("PipeCert", "readonly");
+            tx.onerror = function(event) {
+                console.log("Get transaction failed" + JSON.stringify(event));
+            };
+
             var store = tx.objectStore("PipeCert");
             var index = store.index("by_app");
             console.log("Looking for cert in Indexdb");
             var request = index.get(app);
             request.onsuccess = function(ev) {
-                console.log("ev " + JSON.stringify(ev));
-                console.log("request " + JSON.stringify(request));
-                console.log("this " + JSON.stringify(this));
-                var matching = this.result;
+                //console.log("ev " + JSON.stringify(ev));
+                //console.log("request " + JSON.stringify(request));
+                //console.log("this " + JSON.stringify(this));
+                var matching = ev.target.result;
                 if (matching) {
                     console.log("Returning matched cert in DB");
                     doneCB(matching.cert);
@@ -199,6 +203,7 @@ if (!window.indexedDB) {
             tx.oncomplete = function() {
                 PipeDb.dbDone();
                 console.log("transaction done .");
+		prints.sort(function(a,b){return b.timestamp - a.timestamp;});
                 doneCB(prints);
             };
             var store = tx.objectStore("PipeId");
@@ -230,6 +235,10 @@ if (!window.indexedDB) {
                 request.onsuccess = function() {
                     console.log("Indexdb.open() ok");
                     PipeDb.db = request.result;
+                    PipeDb.db.onerror = function(event) {
+                        console.log("DB problem" + JSON.stringify(event));
+                    };
+
                     action(app, doneCB);
                 };
                 request.onerror = function(event) {

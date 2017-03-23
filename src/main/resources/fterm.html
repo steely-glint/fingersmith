@@ -1,0 +1,132 @@
+<html><head><title>Term</title>
+<style>
+.term {
+    font-family: courier,fixed,swiss,monospace,sans-serif;
+    font-size: 14px;
+    color: #f0f0f0;
+    background: #000000;
+}
+
+.termReverse {
+    color: #000000;
+    background: #00ff00;
+}
+#note {
+    font-size: 12px;
+}
+</style>
+        <script src="js/jquery-1.8.3.js"></script>
+        <script src="js/phono.sdp.js"></script>
+        <script src="js/pipeDb.js"></script>
+        <script src="js/pipeDuct.js"></script>
+        <script src="js/term.js"></script>
+        <script type="text/javascript">
+            var duct = null;
+            var pipe;
+
+            function setFriend(dev) {
+                showOnly(dev);
+                makedc(dev);
+            }
+            function showOnly(fing) {
+                PipeDb.dbListPrint(function(friends) {
+                    var pics = "<ul>";
+                    friends.forEach(function(fr) {
+                        if (fr.finger === fing) {
+                            pics += "<li><img src='" + fr.tag + "'/>Connecting...</li>";
+                        }
+                    });
+                    pics += "</ul>";
+                    $('#friendList').html(pics);
+                }
+                );
+            }
+            function showFriends(friends) {
+                var pics = "<ol>";
+                friends.forEach(function(fr) {
+                    pics += "<li><img src='" + fr.tag + "' onclick=\"setFriend('" + fr.finger + "');\"/></li>";
+                });
+                pics += "</ol>";
+                $('#friendList').html(pics);
+            }
+            function gotId(id) {
+                duct = new PipeDuct(id);
+                duct.setOnDataChannel(onNewDc);
+                PipeDb.dbListPrint(showFriends);
+                $('#remote').hide();
+            }
+function arrayBufferToString(buffer){
+    var arr = new Uint8Array(buffer);
+    var str = String.fromCharCode.apply(String, arr);
+    if(/[\u0080-\uffff]/.test(str)){
+        throw new Error("this string seems to contain (still encoded) multibytes");
+    }
+    return str;
+}
+function stringToArrayBuffer(str){
+    if(/[\u0080-\uffff]/.test(str)){
+        throw new Error("this needs encoding, like UTF-8");
+    }
+    var arr = new Uint8Array(str.length);
+    for(var i=str.length; i--; )
+        arr[i] = str.charCodeAt(i);
+    return arr.buffer;
+}
+            
+            function onDcMessage(evt) {
+                var mess = arrayBufferToString(evt.data);
+                console.log(""+Date.now()+">"+JSON.stringify(evt.data));
+                term.write(mess);
+            }
+            function onNewDc(channel) {
+                console.log("New DC ")
+                channel.onmessage = onDcMessage;
+            }
+            function sendLine(value) {
+                console.log(""+Date.now()+"<"+value);
+                pipe.send(stringToArrayBuffer(value));
+            }
+            var pipe = null;
+
+            function makedc(deviceId) {
+                console.log("setting deviceId" + deviceId);
+                duct.setTo(deviceId);
+                var channel = duct.createDataChannel("term", {});
+                channel.binaryType = "arraybuffer";
+                channel.onopen = function() {
+                    console.log("Outbound channel ");
+                    $('#friendList').hide();
+                    var fl = document.getElementById('terminal');
+                    term = new Term(80, 24, sendLine,fl);
+                    term.open();
+                    pipe = channel;
+                    sendLine("TERM=vt100 export TERM\r");
+                    sendLine("date\r");
+                };
+                channel.onmessage = onDcMessage;
+                channel.onclose = function() {
+                    $('#friendList').show();
+                    $('#terminal').hide();
+                    pipe = null;
+                }
+                chout = channel;
+            }
+
+
+            $(document).ready(function() {
+                PipeDb.whoAmI(gotId, function(err) {
+                    console.log("could not create identity " + err);
+                });
+            });
+        </script>
+    </head>
+    <body>
+        <h1>Terminal </h1>
+        <div id="friendList">
+
+        </div>
+        <div id="terminal"></div>
+
+
+    </body>
+</html>
