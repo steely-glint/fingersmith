@@ -1,0 +1,176 @@
+<html><head><title>Shell</title>
+        <script src="js/require.js"></script>
+        <script src="js/jquery-1.8.3.js"></script>
+        <script src="js/phono.sdp.js"></script>
+        <script src="js/ipseorama.js"></script>
+        <script src="js/dc.js"></script>
+        <script src="js/LazarQr.min.js"></script>
+        <script src="js/adapter.js"></script>
+        <script type="text/javascript">
+            var myFinger = undefined;
+            var ipsed = null;
+            var chout;
+            var nonceS;
+
+            var sha256 = require("js/sha256");
+            function setFriend(fing) {
+                showOnly(fing);
+                makedc(fing);
+            }
+            function showOnly(fing) {
+                Ipseorama.dbListPrint(function(friends) {
+                    var pics = "<ul>";
+                    friends.forEach(function(fr) {
+                        if (fr.finger === fing) {
+                            pics += "<li><img src='" + fr.tag + "'/>Connecting...</li>";
+                        }
+                    });
+                    pics += "</ul>";
+                    $('#friendList').html(pics);
+                }
+                );
+            }
+/*
+Listing available controls for device video0:
+Brightness
+Contrast
+Saturation
+White Balance Temperature, Auto
+Gain
+Power Line Frequency
+White Balance Temperature
+Sharpness
+Backlight Compensation
+Exposure, Auto
+Exposure (Absolute)
+Exposure, Auto Priority
+Pan (relative)
+Tilt (relative)
+Pan Reset
+Tilt Reset
+Focus (absolute)
+Focus, Auto
+Zoom, Absolute
+Pan (Speed)
+Tilt (Speed)
+LED1 Mode
+LED1 Frequency
+*/
+            function zoom(v){
+		var str = "uvcdynctrl -s 'Zoom, Absolute' -- "+v;
+		setLine(str);
+	    }
+            function pan(v){
+		var str = "uvcdynctrl -s 'Pan (Speed)' -- "+v;
+		setLine(str);
+	    }
+            function tilt(v){
+		var str = "uvcdynctrl -s 'Tilt (Speed)' -- "+v;
+		setLine(str);
+	    }
+            function showFriends(friends) {
+                var pics = "<ol>";
+                friends.forEach(function(fr) {
+                    pics += "<li><img src='" + fr.tag + "' onclick=\"setFriend('" + fr.finger + "');\"/></li>";
+                });
+                pics += "</ol>";
+                $('#friendList').html(pics);
+            }
+            function gotFinger(finger) {
+                myFinger = finger;
+                $('#myFinger').html(finger);
+                ipsed = new IpseDataChannel(finger);
+                ipsed.setOnDataChannel(onNewDc);
+                Ipseorama.dbListPrint(showFriends);
+                $('#remote').hide();
+            }
+            
+            function onDcMessage(evt) {
+                var mess = evt.data;
+                var jval = JSON.parse(mess);
+                if (jval.stdout) {
+                  var h = $('#stdout').html()+"<br/>"+jval.stdout
+                  $('#stdout').html(h)
+                }
+                if (jval.stderr) {
+		console.log("stderr"+jval.stderr);
+                  $('#stderr').html(jval.stderr);
+                }
+            }
+            function onNewDc(channel) {
+                console.log("New DC ")
+                channel.onmessage = onDcMessage;
+            }
+            function setLine(l){
+                $('#shellin').val(l);
+                sendLine();
+            }
+
+            function sendLine() {
+                var value = $('#shellin').val();
+                var message = {command: "write"};
+                message.text = value;
+                console.log("sending "+JSON.stringify(message));
+                ipsechan.send(JSON.stringify(message));
+            }
+            var ipsechan = null;
+
+            function makedc(tofinger) {
+                console.log("setting toFinger" + tofinger);
+                ipsed.setTo(tofinger);
+                ipsed.setNonce(nonceS);
+                var channel = ipsed.createDataChannel("shell", {});
+                //var tick;
+                channel.onopen = function() {
+                    console.log("Outbound channel ");
+                    $('#friendList').hide();
+                    $('#remote').show();
+                    $('#shell').onchange=sendLine;
+                    ipsechan = channel;
+                };
+                channel.onmessage = onDcMessage;
+                channel.onclose = function() {
+                    $('#friendList').show();
+                    ipsechan = null;
+                }
+                chout = channel;
+            }
+
+
+            $(document).ready(function() {
+                Ipseorama.whoAmI(gotFinger, function(err) {
+                    console.log("could not create identity " + err);
+                });
+            });
+        </script>
+    </head>
+    <body>
+        <h1>Shell </h1>
+        <div> My Fingerprint is :
+            <span id="myFinger">unknown</span> </div>
+        <div id="friendList">
+
+        </div>
+
+<div>
+<button onmouseup="pan('0')" ontouchend="pan('0')" onmousedown="pan('1')" ontouchstart="pan('1')">Pan +</button>
+<button onmouseup="pan('0')" ontouchend="pan('0')" onmousedown="pan('-1')" ontouchstart="pan('-1')">Pan -</button>
+<button onmouseup="tilt('0')" ontouchend="tilt('0')" onmousedown="tilt('1')" ontouchstart="tilt('1')">Tilt +</button>
+<button onmouseup="tilt('0')" ontouchend="tilt('0')" onmousedown="tilt('-1')" ontouchstart="tilt('-1')">Tilt -</button>
+<input type=range min="100" max="1000" step ="25" value ="250" onchange="zoom(this.value)">Zoom</input>
+
+
+</div>
+
+        <h3>Output</h3>
+        <div id='remote'>
+    		<form onsubmit="sendLine();return false;">
+                <input type="text" name="shell" id="shellin" value="date"/>
+    		</form>
+		<br/>
+	        output text :<br/> <code id="stdout"></code>
+		<br/>
+	        error text :<div id="stderr"></div>
+        </div>
+    </body>
+</html>

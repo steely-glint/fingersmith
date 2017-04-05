@@ -98,8 +98,8 @@
                     console.log("Returning matched cert in DB");
                     setStatus("Cert retrieved .  Expires at "+ matching.cert.expires);
                 } else {
-                    console.log("No suitable cert in DB - creating one ");
-                    setStatus("No cert retrieved");
+                    console.log("No suitable cert in DB - create one ");
+                    setStatus("No cert retrieved, press 'Put cert' to create one.");
                 }
             };
             request.oncomplete = function(ev) {
