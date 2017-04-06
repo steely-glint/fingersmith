@@ -7,7 +7,6 @@
         <script src="js/LazarQr.min.js"></script>
         <script src="js/adapter.js"></script>
         <script type="text/javascript">
-            var myFinger = undefined;
             var ipsed = null;
             var chout;
             var nonceS;
@@ -77,8 +76,6 @@ LED1 Frequency
                 $('#friendList').html(pics);
             }
             function gotFinger(finger) {
-                myFinger = finger;
-                $('#myFinger').html(finger);
                 ipsed = new IpseDataChannel(finger);
                 ipsed.setOnDataChannel(onNewDc);
                 Ipseorama.dbListPrint(showFriends);
@@ -145,25 +142,25 @@ LED1 Frequency
         </script>
     </head>
     <body>
-        <h1>Shell </h1>
-        <div> My Fingerprint is :
-            <span id="myFinger">unknown</span> </div>
+        <h1>PTZ </h1>
         <div id="friendList">
 
         </div>
 
-<div>
-<button onmouseup="pan('0')" ontouchend="pan('0')" onmousedown="pan('1')" ontouchstart="pan('1')">Pan +</button>
-<button onmouseup="pan('0')" ontouchend="pan('0')" onmousedown="pan('-1')" ontouchstart="pan('-1')">Pan -</button>
-<button onmouseup="tilt('0')" ontouchend="tilt('0')" onmousedown="tilt('1')" ontouchstart="tilt('1')">Tilt +</button>
-<button onmouseup="tilt('0')" ontouchend="tilt('0')" onmousedown="tilt('-1')" ontouchstart="tilt('-1')">Tilt -</button>
-<input type=range min="100" max="1000" step ="25" value ="250" onchange="zoom(this.value)">Zoom</input>
-
-
+<div id="remote"> 
+<div id="buttons" >
+<button style="font-size: -webkit-xxx-large" onmouseup="pan('0')" ontouchend="pan('0')" onmousedown="pan('1')" ontouchstart="pan('1')">Pan +</button>
+<button style="font-size: -webkit-xxx-large" nmouseup="pan('0')" ontouchend="pan('0')" onmousedown="pan('-1')" ontouchstart="pan('-1')">Pan -</button>
+<button style="font-size: -webkit-xxx-large" onmouseup="tilt('0')" ontouchend="tilt('0')" onmousedown="tilt('1')" ontouchstart="tilt('1')">Tilt +</button>
+<button style="font-size: -webkit-xxx-large" onmouseup="tilt('0')" ontouchend="tilt('0')" onmousedown="tilt('-1')" ontouchstart="tilt('-1')">Tilt -</button>
+<br/>
+<div style="font-size: -webkit-xxx-large">
+Zoom<br/>
+<input style="width:80%;height:20%;" type=range min="100" max="1000" step ="25" value ="250" onchange="zoom(this.value)"/>
 </div>
+</div>
+        <div>
 
-        <h3>Output</h3>
-        <div id='remote'>
     		<form onsubmit="sendLine();return false;">
                 <input type="text" name="shell" id="shellin" value="date"/>
     		</form>
@@ -172,5 +169,6 @@ LED1 Frequency
 		<br/>
 	        error text :<div id="stderr"></div>
         </div>
+</div>
     </body>
 </html>
