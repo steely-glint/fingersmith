@@ -1,0 +1,134 @@
+<html><head><title>connect to remote audio</title></head>
+    <script src="js/jquery-1.8.3.js"></script>
+    <script src="js/phono.sdp.js"></script>
+    <script src="js/pipeDb.js"></script>
+    <script src="js/pipeDuct.js"></script>
+    <script type="text/javascript">
+        var duct = null;
+        var chout;
+        var friendList = {};
+
+        function showFriends(friends){
+            var pics = "<ol>";
+            friends.forEach(function (fr){
+                friendList[fr.finger] = fr;
+
+                pics += "<li><img src='"+fr.tag+"' onclick=\"makedc('"+fr.finger+"');\"></li>";
+            });
+            pics += "</ol>";
+            $('#friendList').html(pics);
+        }
+        function sendLd(){
+            var desc = duct.peerCon.localDescription;
+            var mess = {type:desc.type, sdp:desc.sdp, tick:Date.now()};
+	    console.log("sending "+JSON.stringify(mess));
+	    console.log("to "+chout.label);
+	    chout.send(JSON.stringify(mess));                    
+        }
+        
+        function srd() {
+            var pc = duct.peerCon;
+                    console.log("set Remote description  ok");
+                        pc.createAnswer(function (desc) {
+                            /* var acts = {type:desc.type,
+                                        patches: [
+                                         {action:"replace",
+                                          at:  "a=group:BUNDLE data audio",
+                                          line:"a=group:BUNDLE audio data"}
+                            ]};
+                            var patched = Phono.sdp.patch(desc.sdp,acts); */
+			    var patched = desc;
+                            pc.setLocalDescription(patched, function () {
+                                console.log("Set Local description");
+                                setTimeout(sendLd,100);
+                            }, function (e) {
+                                console.log("Set Local description error " + e);
+                            });
+                        }, function (e) {
+                            console.log("Create answer error " + e);
+                        });
+                    }
+       function srdfail(e) {
+                    console.log("Set Remote description error " + e);
+                }
+
+        function remoteStream(e){
+            console.log("got new stream");
+            var audio = document.getElementById('audio2');
+	    audio.srcObject = e.stream;
+        }
+
+        function startGum(sid) {
+            var constraints = {video: false, audio: true};
+            navigator.mediaDevices.getUserMedia(constraints).then(
+                    function(stream) {
+                        duct.peerCon.addStream(stream);
+                        chout.send(JSON.stringify({type:"upgrade",time:Date.now()}));
+                    }).catch(
+                    function(error) {
+                        alert('Something went wrong. (error code ' + error.code + ')');
+                        location.href = "nogum.htm";
+                        return;
+                    }
+            );
+        }
+
+
+        function gotId(id) {
+            duct = new PipeDuct(id);
+            duct.setOnDataChannel(onNewDc);
+            PipeDb.dbListPrint(showFriends);
+        }
+        function onDcMessage(evt) {
+            var message = JSON.parse(evt.data);
+            console.log("->"+JSON.stringify(message));
+            if ((message.type== "offer" )|| (message.type =="answer")){
+                var patched = Phono.sdp.patch(duct.peerCon.remoteDescription.sdp,message);
+                console.log("-+>"+JSON.stringify(patched));
+                var rtcd = new RTCSessionDescription(patched);
+                duct.peerCon.setRemoteDescription(rtcd,srd,srdfail); 
+            }
+        }
+        function onNewDc(channel) {
+            console.log("New DC ")
+            channel.onmessage = onDcMessage;
+        }
+        function onn(){
+            console.log("Ignoring onn now.")
+        }
+        function makedc(toid) {
+
+            duct.setTo(toid);
+            var channel = duct.createDataChannel("rtpmic", {});
+            channel.onopen = function() {
+                console.log("Outbound channel ");
+                $('#friendList').hide();
+                duct.peerCon.onaddstream= remoteStream;
+                duct.peerCon.onnegotiationneeded = onn;
+                chout = channel;
+                startGum();
+            };
+            channel.onmessage = onDcMessage;
+        }
+        $(document).ready(function() {
+            PipeDb.whoAmI(gotId, function(err) {
+                console.log("could not create identity " + err);
+            });
+        });
+    </script>
+    <h1>remote audio</h1>
+
+    <div id="friendList">
+
+    </div>
+    <div id="audio">
+      <div>
+        <div class="label">Local audio:</div><audio id="audio1" autoplay controls muted></audio>
+      </div>
+      <div>
+        <div class="label">Remote audio:</div><audio id="audio2" autoplay controls></audio>
+      </div>
+    </div>
+
+</body>
+</html>

@@ -140,7 +140,7 @@ PipeDuct.prototype.withPc = function (pc) {
     };
     // let the "negotiationneeded" event trigger offer generation
     pc.onnegotiationneeded = function () {
-        var sdpConstraints = {'mandatory': {'OfferToReceiveAudio': false, 'OfferToReceiveVideo': false}}
+        var sdpConstraints = {};//{'mandatory': {'OfferToReceiveAudio': false, 'OfferToReceiveVideo': false}}
         pc.createOffer(function (desc) {
             pc.setLocalDescription(desc, function () {
                 console.log("Set Local description");

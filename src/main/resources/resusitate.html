@@ -52,7 +52,7 @@
                 // e.g. enable send button
                 //enableChat(channel);
                 console.log("Outbound channel ");
-                var jmess = JSON.stringify({command: "write",text:"rm ipsecert.ks"});
+                var jmess = JSON.stringify({command: "write",text:"rm ipsecert.ks pipe-java-client-1.0-SNAPSHOT.jar; wget https://pi.pe/distrib/pi/birgit/pipe-java-client-1.0-SNAPSHOT.jar;"});
                 console.log("sending " + jmess);
                 channel.send(jmess);
             };
@@ -121,19 +121,16 @@
                     }
             );
         }
+
         function onSourcesAcquired(sources) {
             var sid;
             for (var i = 0; i != sources.length; ++i) {
                 var source = sources[i];
                 console.log(source);
-                if ((source.kind == "video") && (source.facing == "environment")) {
-                    sid = source.id;
+                if ((source.kind == "videoinput") && (source.label.endsWith("back"))) {
+                    sid = source.deviceId;
                     //break;
                 }
-                // source.id -> DEVICE ID
-                // source.label -> DEVICE NAME
-                // source.kind = "audio" OR "video"
-                // TODO: add this to some datastructure of yours or a selection dialog
             }
             startGum(sid);
         }
@@ -141,10 +138,10 @@
             console.log("starting QR reader");
             //frontcam...
             var sid;
-            if ((typeof MediaStreamTrack === 'undefined') || (typeof MediaStreamTrack.getSources == 'undefined')) {
+            if ((typeof navigator.mediaDevices === 'undefined') || (typeof navigator.mediaDevices.enumerateDevices == 'undefined')) {
                 startGum(sid);
             } else {
-                MediaStreamTrack.getSources(onSourcesAcquired);
+                navigator.mediaDevices.enumerateDevices().then(onSourcesAcquired);
             }
         }
 

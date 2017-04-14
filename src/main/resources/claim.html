@@ -30,7 +30,11 @@
             if (resp.status === "ok") {
                 ipsed.addRemote(snap,
                         function() {
-                            $('#result').html("<a href='/iot/'><img src='/img/pipe@2x.png'/></a>");
+                            var nextP = "/iot/";
+                            if (resp.page){
+                                nextP += resp.page;
+                            }
+                            $('#result').html("<a href='"+nextP+"'><img src='/img/pipe@2x.png'/></a>");
                             chout.close();
                         });
             } else {
