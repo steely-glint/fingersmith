@@ -477,7 +477,15 @@
                     }
                     console.log("found "+patch.at+" at "+where);
                     if (patch.action == "prepend"){
-                        sdpLines.splice(where,0,patch.line);
+                        if (patch.line) {
+                            sdpLines.splice(where, 0, patch.line);
+                        }
+                        if (patch.lines) {
+                            var plines = patch.lines.reverse();
+                            for (var pline in plines) {
+                                sdpLines.splice(where, 0, plines[pline]);
+                            }
+                        }
                     }
                     if (patch.action == "increment"){
                        var bits = sdpLines[where].split(" ");
@@ -493,7 +501,15 @@
                        sdpLines[where] = patch.line;
                     }
                     if (patch.action == "duplicate"){
-                       sdpLines.push(sdpLines[where]);
+                        var withline;
+                        for (var sdpLine in sdpLines) {
+                            var sline = sdpLines[sdpLine];
+                            if (sline.startsWith(patch.line)){
+                                withline = sline;
+                                break;
+                            }
+                        }
+                        sdpLines.splice(where, 0, withline);
                     }
 
                 }

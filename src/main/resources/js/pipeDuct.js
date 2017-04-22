@@ -8,29 +8,43 @@ function PipeDuct(finger,oldws) {
     this.nonceS = null;
     this.nonsense = "";
     this.candyStash = [];
-    var configuration = {
-        "iceServers": [
-            {urls: "stun:146.148.121.175:3478"},
-            {urls: "turn:146.148.121.175:3478?transport=udp", 'credential': 'nexus5x', 'username': 'smartphone'},
-            //{url: "turn:146.148.121.175:3478?transport=tcp", 'credential': 'nexus5x', 'username': 'smartphone'},
-            {url: "turn:146.148.121.175:443?transport=tcp", 'credential': 'nexus5x', 'username': 'smartphone'}
-        ],
-        //"iceTransportPolicy": "relay",
-        //"bundlePolicy":"max-bundle"
-    };
+    this.openTimer;
+    this.patches = [];
+    this.sdpConstraints = {'mandatory': {'OfferToReceiveAudio': false, 'OfferToReceiveVideo': false}}
 
-            var that = this;
+
+
+}
+PipeDuct.prototype.connect = function() {
+    var that = this;
+
+    var promise = new Promise(function(resolve, reject) {
+            var configuration = {
+                "iceServers": [
+                    {urls: "stun:146.148.121.175:3478"},
+                    //{urls: "turn:146.148.121.175:3478?transport=udp", 'credential': 'nexus5x', 'username': 'smartphone'},
+                    //{url: "turn:146.148.121.175:3478?transport=tcp", 'credential': 'nexus5x', 'username': 'smartphone'},
+                    //{url: "turn:146.148.121.175:443?transport=tcp", 'credential': 'nexus5x', 'username': 'smartphone'}
+                ],
+                //"iceTransportPolicy": "relay",
+                //"bundlePolicy":"max-bundle"
+            };
+
             PipeDb.addMyCertToPeerConf(configuration, function () {
                 var wcpc = new RTCPeerConnection(configuration, null)
-                that.withPc(wcpc);
+                that.withPc(wcpc, resolve);
             });
-
+    });
+    return promise;
 }
 PipeDuct.prototype.getWs = function () {
     return this.ws;
 }
+PipeDuct.prototype.setAnswerPatch = function (patch) {
+    this.patches['answer'] = patch;
+}
 
-PipeDuct.prototype.makeWs = function () {
+PipeDuct.prototype.makeWs = function (resolve) {
     if (!window.WebSocket) {
         window.WebSocket = window.MozWebSocket;
     }
@@ -58,10 +72,10 @@ PipeDuct.prototype.makeWs = function () {
     }else {
         socket = new WebSocket( protocol + "//" + host + "/websocket/?finger=" + this.myFinger);
     }
-    this.session = null; // fix this
 
     socket.onopen = function (event) {
         console.log("wsopen " + JSON.stringify(event));
+        resolve(that);
     };
     socket.onclose = function (event) {
         console.log("wsclose " + JSON.stringify(event));
@@ -69,7 +83,10 @@ PipeDuct.prototype.makeWs = function () {
     };
     socket.onmessage = function (event) {
         console.log("message is " + event.data);
-
+        if (that.openTimer){
+            clearInterval(that.openTimer);
+            that.openTimer = null;
+        }
         var data = JSON.parse(event.data);
         console.log("data is " + JSON.stringify(data));
 
@@ -87,7 +104,13 @@ PipeDuct.prototype.makeWs = function () {
             }
             if ((data.type == 'offer') || (data.type == 'answer')) {
                 var sdp = Phono.sdp.buildSDP(data.sdp);
+                if(that.patches[data.type]){
+                    sdp = Phono.sdp.patch(sdp,that.patches[data.type]).sdp;
+                }
                 console.log("sent sdp is " + sdp);
+                if (window.showStatus) {
+                    showStatus("Got "+data.type);
+                }
                 var message = {'sdp': sdp, 'type': data.type};
                 var rtcd;
                 rtcd = new RTCSessionDescription(message);
@@ -126,7 +149,11 @@ PipeDuct.prototype.logError = function (error) {
     console.log(error.name + ": " + error.message);
 };
 
-PipeDuct.prototype.withPc = function (pc) {
+PipeDuct.prototype.mayNeedAudioLater = function(patch){
+    this.sdpConstraints.mandatory.OfferToReceiveAudio = true;
+    this.setAnswerPatch(patch);
+}
+PipeDuct.prototype.withPc = function (pc,promise) {
 // send everything to the peer - via fingersmith
     var that = this;
     pc.onicecandidate = function (evt) {
@@ -140,13 +167,12 @@ PipeDuct.prototype.withPc = function (pc) {
     };
     // let the "negotiationneeded" event trigger offer generation
     pc.onnegotiationneeded = function () {
-        var sdpConstraints = {};//{'mandatory': {'OfferToReceiveAudio': false, 'OfferToReceiveVideo': false}}
         pc.createOffer(function (desc) {
             pc.setLocalDescription(desc, function () {
                 console.log("Set Local description");
                 that.sendSDP(pc);
             }, that.logError);
-        }, that.logError, sdpConstraints);
+        }, that.logError, that.sdpConstraints);
     }
     pc.onsignalingstatechange = function (evt) {
         console.log("signalling state is " + pc.signalingState);
@@ -164,7 +190,7 @@ PipeDuct.prototype.withPc = function (pc) {
             that.ondatachannel(evt);
         }
     };
-    this.makeWs();
+    this.makeWs(promise);
 }
 
 
@@ -244,25 +270,41 @@ PipeDuct.prototype.setOnDataChannel = function (callback) {
     };
 };
 PipeDuct.prototype.sendSDP = function (pc) {
+    var that = this;
+
     var sdpObj = Phono.sdp.parseSDP(pc.localDescription.sdp);
     console.log("this.toFinger:" + this.toFinger);
-    if (this.nonceS){
-          this.nonsense = sha256.hash(this.toFinger + ":" + this.nonceS + ":" + this.myFinger).toUpperCase();
-    } 
+    if (this.nonceS) {
+        this.nonsense = sha256.hash(this.toFinger + ":" + this.nonceS + ":" + this.myFinger).toUpperCase();
+    }
     var sdpcontext = {
         "to": this.toFinger,
         "from": this.myFinger,
         "type": pc.localDescription.type,
         "sdp": sdpObj,
         "session": this.session,
-        "nonsense": this.nonsense
+        "nonsense": this.nonsense,
+        "retry":0
     };
-    console.log("sending:" + JSON.stringify(sdpcontext))
-
-    this.ws.send(JSON.stringify(sdpcontext));
-    if (window.showStatus) {
-        showStatus("Sent " + pc.localDescription.type);
-    }
+    var sendFunc =function () {
+        console.log("sending:" + JSON.stringify(sdpcontext));
+        that.ws.send(JSON.stringify(sdpcontext));
+        if (window.showStatus) {
+            showStatus("Sent " + sdpcontext.type + " retry number "+sdpcontext.retry);
+        }
+        sdpcontext.retry ++;
+        if (sdpcontext.retry > 5){
+            if (that.openTimer){
+                clearInterval(that.openTimer);
+                console.log("given up on:" + JSON.stringify(sdpcontext));
+                if (window.showStatus) {
+                    showStatus("Giving up on connection");
+                }
+            }
+        }
+    };
+    this.openTimer = setInterval(sendFunc, 5000);
+    sendFunc();
 }
 
 PipeDuct.prototype.sendCandy = function (cand) {

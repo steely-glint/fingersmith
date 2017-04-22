@@ -4,19 +4,22 @@
 var duct = null;
 var chout;
 var snap = null ;
+var timer;
 
 var sha256 = require("js/sha256");
 var gotId= function(id) {
-    duct = new PipeDuct(id);
-    duct.setOnDataChannel(onNewDc);
+
 };
 
 function onDcMessage(evt) {
     var resp = JSON.parse(evt.data);
     if (resp.status === "ok") {
+        if (timer){
+            clearInterval(timer);
+        }
         duct.addRemote(snap,
             function() {
-                document.getElementById("result").innerHTML = "<H3>Device Added</H3>";
+                document.getElementById("result").innerHTML = "<a href='/iot/"+resp.page+"'><img src='/img/pipe@2x.png'/></a>";
                 chout.close();
             });
     } else {
@@ -27,18 +30,28 @@ function onNewDc(channel) {
     console.log("New DC ")
     channel.onmessage = onDcMessage;
 }
-var makedc = function (tofinger,nonceS) {
-    duct.setTo(tofinger);
-    duct.setNonce(nonceS);
-    var channel = duct.createDataChannel("cert", {});
-    channel.onopen = function() {
-        console.log("Outbound channel ");
-        var jmess = JSON.stringify({id: "1", action: "list"});
-        console.log("sending " + jmess);
-        channel.send(jmess);
-    };
-    channel.onmessage = onDcMessage;
-    chout = channel;
+function showStatus(stat){
+    document.getElementById("result").innerHTML = "<H4>"+stat+ "</H4>";
+}
+var dopair = function (id, toId, nonceS) {
+    console.log("Trying data to pair");
+    duct = new PipeDuct(id);
+    duct.connect().then(function (d) {
+        console.log("Duct promise returned ");
+        duct.setOnDataChannel(onNewDc);
+        duct.setTo(toId);
+        duct.setNonce(nonceS);
+
+        var channel = duct.createDataChannel("cert", {});
+        channel.onopen = function () {
+            console.log("Outbound channel ");
+            var jmess = JSON.stringify({id: "1", action: "list"});
+            console.log("sending " + jmess);
+            channel.send(jmess);
+        };
+        channel.onmessage = onDcMessage;
+        chout = channel;
+    });
 };
 
 /*

@@ -7,111 +7,228 @@
         var duct = null;
         var chout;
         var friendList = {};
+        var chrome60 = false;
 
-        function showFriends(friends){
+        function showFriends(friends) {
             var pics = "<ol>";
-            friends.forEach(function (fr){
+            friends.forEach(function (fr) {
                 friendList[fr.finger] = fr;
 
-                pics += "<li><img src='"+fr.tag+"' onclick=\"makedc('"+fr.finger+"');\"></li>";
+                pics += "<li><img src='" + fr.tag + "' onclick=\"makedc('" + fr.finger + "');\"></li>";
             });
             pics += "</ol>";
             $('#friendList').html(pics);
         }
-        function sendLd(){
+        function sendLd() {
             var desc = duct.peerCon.localDescription;
-            var mess = {type:desc.type, sdp:desc.sdp, tick:Date.now()};
-	    console.log("sending "+JSON.stringify(mess));
-	    console.log("to "+chout.label);
-	    chout.send(JSON.stringify(mess));                    
+            var mess = {type: desc.type, sdp: desc.sdp, tick: Date.now()};
+            console.log("sending " + JSON.stringify(mess));
+            console.log("to " + chout.label);
+            chout.send(JSON.stringify(mess));
         }
-        
+
         function srd() {
             var pc = duct.peerCon;
-                    console.log("set Remote description  ok");
-                        pc.createAnswer(function (desc) {
-                            /* var acts = {type:desc.type,
-                                        patches: [
-                                         {action:"replace",
-                                          at:  "a=group:BUNDLE data audio",
-                                          line:"a=group:BUNDLE audio data"}
-                            ]};
-                            var patched = Phono.sdp.patch(desc.sdp,acts); */
-			    var patched = desc;
-                            pc.setLocalDescription(patched, function () {
-                                console.log("Set Local description");
-                                setTimeout(sendLd,100);
-                            }, function (e) {
-                                console.log("Set Local description error " + e);
-                            });
-                        }, function (e) {
-                            console.log("Create answer error " + e);
-                        });
-                    }
-       function srdfail(e) {
-                    console.log("Set Remote description error " + e);
-                }
+            console.log("set Remote description  ok");
+            pc.createAnswer(function (desc) {
+                pc.setLocalDescription(desc, function () {
+                    console.log("Set Local description");
+                    setTimeout(sendLd, 100);
+                }, function (e) {
+                    console.log("Set Local description error " + e);
+                });
+            }, function (e) {
+                console.log("Create answer error " + e);
+            });
+        }
+        function srdfail(e) {
+            console.log("Set Remote description error " + e);
+        }
 
-        function remoteStream(e){
+        function remoteStream(e) {
             console.log("got new stream");
             var audio = document.getElementById('audio2');
-	    audio.srcObject = e.stream;
+            audio.srcObject = e.stream;
         }
 
         function startGum(sid) {
             var constraints = {video: false, audio: true};
             navigator.mediaDevices.getUserMedia(constraints).then(
-                    function(stream) {
-                        duct.peerCon.addStream(stream);
-                        chout.send(JSON.stringify({type:"upgrade",time:Date.now()}));
-                    }).catch(
-                    function(error) {
-                        alert('Something went wrong. (error code ' + error.code + ')');
-                        location.href = "nogum.htm";
-                        return;
-                    }
+                function (stream) {
+                    duct.peerCon.addStream(stream);
+                    chout.send(JSON.stringify({type: "upgrade", time: Date.now()}));
+                }).catch(
+                function (error) {
+                    alert('Something went wrong. (error code ' + error.code + ')');
+                    location.href = "nogum.htm";
+                    return;
+                }
             );
         }
 
+        // only used if we are forced to create an inactive m=audio from day one.
+        var addinactiveaudiopatch = {
+            "type": "answer",
+            patches: [
+                {
+                    "action": "increment",
+                    "at": "o=-",
+                    "field": 2
+                },
+                {
+                    "action": "prepend",
+                    "at": "m=application",
+                    "lines": [
+                        "a=group:BUNDLE audio data",
+                        "m=audio 9 UDP/TLS/RTP/SAVPF 0",
+                        "c=IN IP4 0.0.0.0",
+                        "a=rtcp:9 IN IP4 0.0.0.0",
+                        "a=mid:audio",
+                        "a=inactive",
+                        "a=rtcp-mux",
+                        "a=rtpmap:0 PCMU/8000"]
+                },
+                {
+                    "action": "duplicate",
+                    "at": "m=application",
+                    "line": "a=fingerprint:"
+                },
+                {
+                    "action": "duplicate",
+                    "at": "m=application",
+                    "line": "a=ice-ufrag:"
+                },
+                {
+                    "action": "duplicate",
+                    "at": "m=application",
+                    "line": "a=ice-pwd:"
+                }
+            ]
+        };
+
+        function addaudiopatch(mess) {
+            var info = mess.info;
+            console.log("message is " + JSON.stringify(mess))
+            if (chrome60) {
+                mess.patches = [
+                    // add an audio mid
+                    {
+                        "action": "increment",
+                        "at": "o=-",
+                        "field": 2
+                    },
+                    {
+                        "action": "prepend",
+                        "at": "m=application",
+                        "line": "a=group:BUNDLE " + info.datamid + " audio"
+                    },
+                    {
+                        "action": "append",
+                        "at": "end",
+                        "lines": [
+                            "m=audio 9 UDP/TLS/RTP/SAVPF "+info.vtype,
+                            "c=IN IP4 0.0.0.0",
+                            "a=rtcp:9 IN IP4 0.0.0.0",
+                            "a=mid:audio",
+                            "a=sendrcv",
+                            "a=rtcp-mux",
+                            "a=rtpmap:" + info.vtype + " " + info.codec,
+                            "a=ssrc:" + info.csrc + " cname:doorbell",
+                            "a=ssrc:" + info.csrc + " mslabel:" + info.msid,
+                            "a=ssrc:" + info.csrc + " label:" + info.appdataS,
+                            "a=ssrc:" + info.csrc + " msid:" + info.msid + " " + info.appdataS,
+                        ]
+                    },
+                    {
+                        "action": "duplicate",
+                        "at": "m=audio",
+                        "line": "a=fingerprint:"
+                    },
+                    {
+                        "action": "duplicate",
+                        "at": "m=audio",
+                        "line": "a=ice-ufrag:"
+                    },
+                    {
+                        "action": "duplicate",
+                        "at": "m=audio",
+                        "line": "a=ice-pwd:"
+                    }
+                ];
+            } else {
+                // already (should) have an inactive audio mid
+                mess.patches = [
+                    {
+                        "action": "replace",
+                        "at": "a=inactive",
+                        "line": "a=sendrecv"
+                    },
+                    {
+                        "action": "prepend",
+                        "at": "m=application",
+                        "lines": [
+                            "a=ssrc:" + info.csrc + " cname:doorbell",
+                            "a=ssrc:" + info.csrc + " mslabel:" + info.msid,
+                            "a=ssrc:" + info.csrc + " label:" + info.appdataS,
+                            "a=ssrc:" + info.csrc + " msid:" + info.msid + " " + info.appdataS,
+                        ]
+                    },
+                    {
+                        "action": "replace",
+                        "at": "m=audio",
+                        "line": "m=audio 9 UDP/TLS/RTP/SAVPF "+info.vtype
+                    },
+                    ,
+
+                ]
+            }
+        }
 
         function gotId(id) {
             duct = new PipeDuct(id);
             duct.setOnDataChannel(onNewDc);
+            if (!chrome60) {
+                duct.mayNeedAudioLater(addinactiveaudiopatch);
+            }
             PipeDb.dbListPrint(showFriends);
         }
         function onDcMessage(evt) {
             var message = JSON.parse(evt.data);
-            console.log("->"+JSON.stringify(message));
-            if ((message.type== "offer" )|| (message.type =="answer")){
-                var patched = Phono.sdp.patch(duct.peerCon.remoteDescription.sdp,message);
-                console.log("-+>"+JSON.stringify(patched));
+            console.log("->" + JSON.stringify(message));
+            if ((message.type == "offer" ) || (message.type == "answer")) {
+                if (message.info) {
+                    addaudiopatch(message);
+                }
+                var patched = Phono.sdp.patch(duct.peerCon.remoteDescription.sdp, message);
+                console.log("-+>" + JSON.stringify(patched));
                 var rtcd = new RTCSessionDescription(patched);
-                duct.peerCon.setRemoteDescription(rtcd,srd,srdfail); 
+                duct.peerCon.setRemoteDescription(rtcd, srd, srdfail);
             }
         }
         function onNewDc(channel) {
             console.log("New DC ")
             channel.onmessage = onDcMessage;
         }
-        function onn(){
+        function onn() {
             console.log("Ignoring onn now.")
         }
         function makedc(toid) {
-
             duct.setTo(toid);
-            var channel = duct.createDataChannel("rtpmic", {});
-            channel.onopen = function() {
-                console.log("Outbound channel ");
-                $('#friendList').hide();
-                duct.peerCon.onaddstream= remoteStream;
-                duct.peerCon.onnegotiationneeded = onn;
-                chout = channel;
-                startGum();
-            };
-            channel.onmessage = onDcMessage;
+            duct.connect().then(function (d) {
+                var channel = duct.createDataChannel("rtpmic", {});
+                channel.onopen = function () {
+                    console.log("Outbound channel ");
+                    $('#friendList').hide();
+                    duct.peerCon.onaddstream = remoteStream;
+                    duct.peerCon.onnegotiationneeded = onn;
+                    chout = channel;
+                    startGum();
+                };
+                channel.onmessage = onDcMessage;
+            });
         }
-        $(document).ready(function() {
-            PipeDb.whoAmI(gotId, function(err) {
+        $(document).ready(function () {
+            PipeDb.whoAmI(gotId, function (err) {
                 console.log("could not create identity " + err);
             });
         });

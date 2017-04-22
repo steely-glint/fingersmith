@@ -3,6 +3,7 @@
   <head>
     <title>Bluetooth pairing</title>
 <!-- Origin Trial Token, feature = Web Bluetooth, origin = https://pi.pe, expires = 2017-01-24 -->
+<link href="/pipe.css" media="all" rel="stylesheet" />
 <meta http-equiv="origin-trial" data-feature="Web Bluetooth" data-expires="2017-01-24" content="At+eFpPi6OI0oH0ycsTr4pwz9b/h0mMjhKIYL6MZtGuItXzc2cQq68CR9FEdAzwyetL+RHXiNuLdSgLcsW4hIA8AAABQeyJvcmlnaW4iOiAiaHR0cHM6Ly9waS5wZTo0NDMiLCAiZmVhdHVyZSI6ICJXZWJCbHVldG9vdGgiLCAiZXhwaXJ5IjogMTQ4NTMyMDM5OX0="/>
 
       <script src="js/require.js"></script>
@@ -21,6 +22,7 @@
  </body>
 
   <script>
+      var timer;
     var serviceUuid = parseInt("0x919E");
 function str2ab(str) {
   var buf = new ArrayBuffer(str.length); 
@@ -157,15 +159,12 @@ function createHexString(value) {
             console.log("Connection fully established - disconnecting.");
             this.bluetoothDevice.gatt.disconnect();
             PipeDb.whoAmI(function (id) {
-                gotId(id);
                 var vh = [];
-                setTimeout(function(){
-	           console.log("Trying to pair");
-                   values.forEach(value => {vh[value.name]=value.value;});
-                   var id = vh["fpa"]+vh["fpb"];
-                   var nonce = vh["nonce"];
-                   makedc(id,nonce);
-                },25000); 
+	            console.log("Have data to pair");
+                values.forEach(value => {vh[value.name]=value.value;});
+                var toid = vh["fpa"]+vh["fpb"];
+                var nonce = vh["nonce"];
+                dopair(id,toid,nonce);
             }, function(err) {
                  console.log("could not create identity " + err);
             });
