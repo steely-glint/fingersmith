@@ -5,9 +5,12 @@
     <script src="js/pipeDuct.js"></script>
     <script type="text/javascript">
         var duct = null;
-        var chout;
         var friendList = {};
-        var chrome60 = false;
+        var chrome60 = true;
+        var img = new Image();
+        var mess = "";
+        var micc;
+
 
         function showFriends(friends) {
             var pics = "<ol>";
@@ -23,8 +26,8 @@
             var desc = duct.peerCon.localDescription;
             var mess = {type: desc.type, sdp: desc.sdp, tick: Date.now()};
             console.log("sending " + JSON.stringify(mess));
-            console.log("to " + chout.label);
-            chout.send(JSON.stringify(mess));
+            console.log("to " + micc.label);
+            micc.send(JSON.stringify(mess));
         }
 
         function srd() {
@@ -56,7 +59,7 @@
             navigator.mediaDevices.getUserMedia(constraints).then(
                 function (stream) {
                     duct.peerCon.addStream(stream);
-                    chout.send(JSON.stringify({type: "upgrade", time: Date.now()}));
+                    micc.send(JSON.stringify({type: "upgrade", time: Date.now()}));
                 }).catch(
                 function (error) {
                     alert('Something went wrong. (error code ' + error.code + ')');
@@ -126,7 +129,7 @@
                         "action": "append",
                         "at": "end",
                         "lines": [
-                            "m=audio 9 UDP/TLS/RTP/SAVPF "+info.vtype,
+                            "m=audio 9 UDP/TLS/RTP/SAVP "+info.vtype,
                             "c=IN IP4 0.0.0.0",
                             "a=rtcp:9 IN IP4 0.0.0.0",
                             "a=mid:audio",
@@ -135,24 +138,29 @@
                             "a=rtpmap:" + info.vtype + " " + info.codec,
                             "a=ssrc:" + info.csrc + " cname:doorbell",
                             "a=ssrc:" + info.csrc + " mslabel:" + info.msid,
-                            "a=ssrc:" + info.csrc + " label:" + info.appdataS,
-                            "a=ssrc:" + info.csrc + " msid:" + info.msid + " " + info.appdataS,
+                            "a=ssrc:" + info.csrc + " label:" + info.appdata,
+                            "a=ssrc:" + info.csrc + " msid:" + info.msid + " " + info.appdata,
                         ]
                     },
                     {
                         "action": "duplicate",
-                        "at": "m=audio",
+                        "at": "mid:audio",
                         "line": "a=fingerprint:"
                     },
                     {
                         "action": "duplicate",
-                        "at": "m=audio",
+                        "at": "mid:audio",
                         "line": "a=ice-ufrag:"
                     },
                     {
                         "action": "duplicate",
-                        "at": "m=audio",
+                        "at": "mid:audio",
                         "line": "a=ice-pwd:"
+                    },
+                    {
+                        "action": "duplicate",
+                        "at": "mid:audio",
+                        "line": "a=setup:"
                     }
                 ];
             } else {
@@ -192,7 +200,7 @@
             }
             PipeDb.dbListPrint(showFriends);
         }
-        function onDcMessage(evt) {
+        function onMicDcMessage(evt) {
             var message = JSON.parse(evt.data);
             console.log("->" + JSON.stringify(message));
             if ((message.type == "offer" ) || (message.type == "answer")) {
@@ -205,26 +213,50 @@
                 duct.peerCon.setRemoteDescription(rtcd, srd, srdfail);
             }
         }
+        function onCamDcMessage(evt) {
+            mess += evt.data;
+            if (mess.endsWith("}")){
+                var jval = JSON.parse(mess);
+                mess="";
+                var framedata = 'data:image/jpeg;base64,' +jval.frame;
+                img.onload = function(){
+                    var ctx = document.getElementById('camera').getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                }
+                img.src=framedata;
+
+                console.log("got image ");
+            }
+        }
         function onNewDc(channel) {
-            console.log("New DC ")
-            channel.onmessage = onDcMessage;
+            console.log("New DC ?!? ")
         }
         function onn() {
             console.log("Ignoring onn now.")
         }
+        function micOn(){
+            micc = duct.createDataChannel("rtpmic", {});
+            micc.onopen = function () {
+                console.log("mic channel ");
+                duct.peerCon.onaddstream = remoteStream;
+                duct.peerCon.onnegotiationneeded = onn;
+                startGum();
+            };
+            micc.onmessage = onMicDcMessage;
+        }
         function makedc(toid) {
             duct.setTo(toid);
             duct.connect().then(function (d) {
-                var channel = duct.createDataChannel("rtpmic", {});
-                channel.onopen = function () {
-                    console.log("Outbound channel ");
+                var camc = duct.createDataChannel("camera", {});
+                camc.onopen = function() {
+                    console.log("cam channel ");
+                    var message = {command: "read"};
+                    camc.send(JSON.stringify(message));
                     $('#friendList').hide();
-                    duct.peerCon.onaddstream = remoteStream;
-                    duct.peerCon.onnegotiationneeded = onn;
-                    chout = channel;
-                    startGum();
+                    $('#camera').show();
+                    $('#camera').click(micOn);
                 };
-                channel.onmessage = onDcMessage;
+                camc.onmessage = onCamDcMessage;
             });
         }
         $(document).ready(function () {
@@ -246,6 +278,7 @@
         <div class="label">Remote audio:</div><audio id="audio2" autoplay controls></audio>
       </div>
     </div>
+    <canvas id="camera" width="640" height="480"/>
 
 </body>
 </html>
