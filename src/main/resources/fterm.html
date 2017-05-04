@@ -91,25 +91,27 @@ function stringToArrayBuffer(str){
             function makedc(deviceId) {
                 console.log("setting deviceId" + deviceId);
                 duct.setTo(deviceId);
-                var channel = duct.createDataChannel("term", {});
-                channel.binaryType = "arraybuffer";
-                channel.onopen = function() {
-                    console.log("Outbound channel ");
-                    $('#friendList').hide();
-                    var fl = document.getElementById('terminal');
-                    term = new Term(80, 24, sendLine,fl);
-                    term.open();
-                    pipe = channel;
-                    sendLine("TERM=vt100 export TERM\r");
-                    sendLine("date\r");
-                };
-                channel.onmessage = onDcMessage;
-                channel.onclose = function() {
-                    $('#friendList').show();
-                    $('#terminal').hide();
-                    pipe = null;
-                }
-                chout = channel;
+                duct.connect().then(function (d) {
+                    var channel = duct.createDataChannel("term", {});
+                    channel.binaryType = "arraybuffer";
+                    channel.onopen = function () {
+                        console.log("Outbound channel ");
+                        $('#friendList').hide();
+                        var fl = document.getElementById('terminal');
+                        term = new Term(80, 24, sendLine, fl);
+                        term.open();
+                        pipe = channel;
+                        sendLine("TERM=vt100 export TERM\r");
+                        sendLine("date\r");
+                    };
+                    channel.onmessage = onDcMessage;
+                    channel.onclose = function () {
+                        $('#friendList').show();
+                        $('#terminal').hide();
+                        pipe = null;
+                    }
+                    chout = channel;
+                 } );
             }
 
 

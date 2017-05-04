@@ -19,7 +19,10 @@ function onDcMessage(evt) {
         }
         duct.addRemote(snap,
             function() {
-                document.getElementById("result").innerHTML = "<a href='/iot/"+resp.page+"'><img src='/img/pipe@2x.png'/></a>";
+                if (resp.page) {
+                    localStorage[resp.page] = duct.toFinger;
+                }
+                document.getElementById("result").innerHTML = "<a href='/iot/"+resp.page+"'><img  src='/img/pipe@2x.png'/></a>";
                 chout.close();
             });
     } else {
