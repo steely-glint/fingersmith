@@ -22,9 +22,7 @@ PipeDuct.prototype.connect = function() {
             var configuration = {
                 "iceServers": [
                     {urls: "stun:146.148.121.175:3478"},
-                    //{urls: "turn:146.148.121.175:3478?transport=udp", 'credential': 'nexus5x', 'username': 'smartphone'},
-                    //{url: "turn:146.148.121.175:3478?transport=tcp", 'credential': 'nexus5x', 'username': 'smartphone'},
-                    //{url: "turn:146.148.121.175:443?transport=tcp", 'credential': 'nexus5x', 'username': 'smartphone'}
+                    {urls: "turn:146.148.121.175:3478?transport=udp", 'credential': 'nexus5x', 'username': 'smartphone'},
                 ],
                 //"iceTransportPolicy": "relay",
                 //"bundlePolicy":"max-bundle"

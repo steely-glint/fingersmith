@@ -371,7 +371,7 @@
         console.log("Set Remote description error " + e);
     }
 
-    function remoteStream(e) {
+    function remoteAStream(e) {
             var audioContext = new AudioContext();
             // Create an AudioNode from the stream
             var mediaStreamSource = audioContext.createMediaStreamSource(e.stream);
@@ -379,7 +379,7 @@
             // or any other node for processing!
             mediaStreamSource.connect(audioContext.destination);
     }
-    function remoteAStream(e) {
+    function remoteStream(e) {
         console.log("got new stream");
         var audio = document.getElementById('audio2');
         audio.srcObject = e.stream;
@@ -401,7 +401,7 @@
     }
 
     function micOn(){
-        micc = duct.createDataChannel("rtpmic", {});
+        micc = duct.createDataChannel("audio", {});
         micc.onopen = function () {
             console.log("mic channel ");
             duct.peerCon.onaddstream = remoteStream;
