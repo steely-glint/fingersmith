@@ -103,6 +103,7 @@ function stringToArrayBuffer(str){
                         pipe = channel;
                         sendLine("TERM=vt100 export TERM\r");
                         sendLine("date\r");
+                        sendLine("hostname -I\r");
                     };
                     channel.onmessage = onDcMessage;
                     channel.onclose = function () {

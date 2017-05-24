@@ -25,7 +25,7 @@ PipeDuct.prototype.connect = function() {
                     {urls: "turn:146.148.121.175:3478?transport=udp", 'credential': 'nexus5x', 'username': 'smartphone'},
                 ],
                 //"iceTransportPolicy": "relay",
-                //"bundlePolicy":"max-bundle"
+                "bundlePolicy":"max-bundle","iceCandidatePoolSize":1
             };
 
             PipeDb.addMyCertToPeerConf(configuration, function () {
@@ -155,10 +155,13 @@ PipeDuct.prototype.withPc = function (pc,promise) {
 // send everything to the peer - via fingersmith
     var that = this;
     pc.onicecandidate = function (evt) {
+        console.log("local candidate")
         if (evt.candidate != null) {
             if (pc.signalingState == 'stable') {
+                console.log("sending")
                 that.sendCandy(evt.candidate);
             } else {
+                console.log("stashing")
                 that.stashCandy(evt.candidate);
             }
         }
