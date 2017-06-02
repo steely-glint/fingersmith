@@ -5,10 +5,11 @@ var duct = null;
 var chout;
 var snap = null ;
 var timer;
+var localid;
 
 var sha256 = require("js/sha256");
 var gotId= function(id) {
-
+    localid = id;
 };
 
 function onDcMessage(evt) {
@@ -36,9 +37,9 @@ function onNewDc(channel) {
 function showStatus(stat){
     document.getElementById("result").innerHTML = "<H4>"+stat+ "</H4>";
 }
-var dopair = function (id, toId, nonceS) {
+var dopair = function (toId, nonceS) {
     console.log("Trying data to pair");
-    duct = new PipeDuct(id);
+    duct = new PipeDuct(localid);
     duct.connect().then(function (d) {
         console.log("Duct promise returned ");
         duct.setOnDataChannel(onNewDc);

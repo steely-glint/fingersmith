@@ -70,11 +70,12 @@ PipeDuct.prototype.makeWs = function (resolve) {
     }else {
         socket = new WebSocket( protocol + "//" + host + "/websocket/?finger=" + this.myFinger);
     }
-
-    socket.onopen = function (event) {
-        console.log("wsopen " + JSON.stringify(event));
-        resolve(that);
-    };
+    if (socket.readyState != 1) {
+        socket.onopen = function (event) {
+            console.log("wsopen " + JSON.stringify(event));
+            resolve(that);
+        };
+    }
     socket.onclose = function (event) {
         console.log("wsclose " + JSON.stringify(event));
         ws = null;
@@ -142,6 +143,9 @@ PipeDuct.prototype.makeWs = function (resolve) {
         }
     };
     this.ws =  socket;
+    if (socket.readyState == 1){
+        resolve(this);
+    }
 };
 PipeDuct.prototype.logError = function (error) {
     console.log(error.name + ": " + error.message);
@@ -207,60 +211,39 @@ PipeDuct.prototype.setTo = function (tof) {
 };
 PipeDuct.prototype.addRemote = function (tag,done) {
     var that = this;
-    if (typeof webkitRTCPeerConnection == "function") {
-        console.log("Peer connection does not have sctp - use getstats ?");
-        this.peerCon.getStats(function (res) {
-            res.result().forEach(function (result) {
-                console.log(">>>>type>>" + result.type);
-                console.log(">>>>id>>>>" + result.id);
-                if (result.type === "googCertificate") {
-                    var print = result.stat("googFingerprint");
-                    var fcert = result.stat("googDerBase64");
-                    print = print.split(":").join("");
-                    if (print === that.toFinger) {
-                        // ToDo - really need to grab this once - and store it or it becomes a 3rd party metadata source.
-                        // and ideally use random hash not our FP? Needs thought.
-                        if (tag == null) {
-                            tag = "https://robohash.org/"+print+".jpg?size=320x240&ignoreext=false";
-                        }
-                        var printncert = {finger: print, cert: fcert, tag: tag};
-                        console.log("adding matching print+cert " + JSON.stringify(printncert));
-                        PipeDb.dbAddPrint(printncert, function () {
-                            console.log("add print done.")
-                            if (done){
-                                done();
-                            }
-                        })
-
-                    } else {
-                        console.log("skipping print " + print + " is not " + that.toFinger);
-                    }
-
-                } else {
-                    /*result.names().forEach(function (name) {
-                     console.log(name + " = " + result.stat(name))
-                     });*/
-                }
-            });
-        });
-    } else {
-        var cert = "unavailable";
-        if (this.peerCon.sctp) {
-            console.log("Peer connection does have sctp");
-            if (this.peerCon.sctp.transport) {
-                console.log("have dtls transport");
-                var certs = this.peerCon.sctp.transport.getRemoteCertificates()
-                console.log(certs);
-                cert = certs[0]; // or perhaps to bas 64 ?
-            }
+    this.peerCon.getStats().then(function (res) {
+        // ToDo - really need to grab this once - and store it or it becomes a 3rd party metadata source.
+        // and ideally use random hash not our FP? Needs thought.
+        if (tag == null) {
+            tag = "https://robohash.org/"+print+".jpg?size=320x240&ignoreext=false";
         }
-        var printncert = {finger: this.toFinger, cert: cert, tag: tag};
-        console.log("adding matching print+cert " + JSON.stringify(printncert));
+        var printncert = {finger: that.toFinger, cert: "unavailable-firefox-cert", tag: tag};
+        res.forEach(function (result) {
+            console.log(">>>>type>>" + result.type);
+            console.log(">>>>id>>>>" + result.id);
+            if (result.type === "certificate") {
+                var print = result.fingerprint
+                print = print.split(":").join("");
+                if (print === printncert.finger) {
+                    printncert.cert= result.base64Certificate;;
+                    console.log("found matching print ");
+                } else {
+                    console.log("skipping print " + print + " is not " + that.toFinger);
+                }
+            } else {
+                console.log("Entry ->"+JSON.stringify(result));
+            }
+        });
+        console.log("adding print+cert " + JSON.stringify(printncert));
         PipeDb.dbAddPrint(printncert, function () {
             console.log("add print done.")
-        });
-        console.log("this.toFinger:" + this.toFinger);
-    }
+            if (done){
+                done();
+            }
+        })
+    });
+
+
 };
 PipeDuct.prototype.setNonce = function (n) {
     this.nonceS = n;

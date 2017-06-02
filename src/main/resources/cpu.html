@@ -26,8 +26,10 @@
         }
         function gotFinger(id) {
             duct = new PipeDuct(id);
-            duct.setOnDataChannel(onNewDc);
-            PipeDb.dbListPrint(showFriends);
+            duct.connect().then(function(d) {
+                d.setOnDataChannel(onNewDc);
+                PipeDb.dbListPrint(showFriends);
+            });
         }
         function onDcMessage(evt) {
             var mess = evt.data;

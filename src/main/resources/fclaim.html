@@ -9,9 +9,6 @@
     <script src="js/LazarQr.min.js"></script>
     <script src="js/claim.js"></script>
     <script type="text/javascript">
-        var myFinger = undefined;
-        var ipsed = null;
-        var chout;
         var nonceS;
         var snap;
 
@@ -41,7 +38,7 @@
 
                 $("#qr-canvas").remove();
                 $("#gumVideo").css("display", "none");
-                makedc(fparts[0],fparts[1]);
+                dopair(fparts[0],fparts[1]);
             };
             var tick = setInterval(function() {
                 if ((video.videoWidth > 0) && (video.videoHeight > 0)) {
@@ -114,9 +111,7 @@
         <canvas width="320" height="240" id="qr-canvas"></canvas>
         <video style="display:none;" width="320" height="240" id="gumVideo" autoplay="autoplay"/>
     </div>
-    <form onsubmit="return false;">
-        <input type="text" name="to" id="tofinger" value="2D078882CFAC8A74D56B152A162CAE2F196D2AAC7BC90300DB0180031FC56E11"/>
-    </form>
+
 
     <div id='result'> </div>
 

@@ -1,0 +1,80 @@
+<html><head><title>Beaglebone voltage monitor</title></head>
+    <script src="js/jquery-1.8.3.js"></script>
+    <script src="js/phono.sdp.js"></script>
+    <script src="js/pipeDb.js"></script>
+    <script src="js/pipeDuct.js"></script>
+    <script type="text/javascript">
+        var myId = undefined;
+        var duct = null;
+        var pipe;
+        var friendList = {};
+        var count = 0;
+        var rate =0;
+
+        function setFriend(fing){
+            $('#tofinger').val(fing);
+        }
+        function showFriends(friends){
+            var pics = "<ol>";
+            friends.forEach(function (fr){
+                friendList[fr.finger] = fr;
+
+                pics += "<li><img src='"+fr.tag+"' onclick=\"makedc('"+fr.finger+"');\"></li>";
+            });
+            pics += "</ol>";
+            $('#friendList').html(pics);
+        }
+        function gotId(id) {
+            myId = id;
+            duct = new PipeDuct(id);
+            duct.setOnDataChannel(onNewDc);
+            duct.connect().then(function(d){
+              PipeDb.dbListPrint(showFriends);
+            });
+        }
+        function showSpeed(){
+            var ticks = Date.now() - when;
+            rate = (1000.0 * count) / ticks;
+            console.log("rate = "+rate);
+        }
+        function onDcMessage(evt) {
+            var d = JSON.parse(evt.data);    
+            count = d.count++;
+            pipe.send(JSON.stringify(d));
+            showSpeed();
+            $('#count').html("count ="+count+" rate="+rate);
+        }
+        function onNewDc(channel) {
+            console.log("New DC ")
+            channel.onmessage = onDcMessage;
+        }
+        function makedc(toId) {
+            console.log("setting to" + toId);
+
+            duct.setTo(toId);
+            var channel = duct.createDataChannel("ws://localhost:8080/websocket", {});
+            channel.onopen = function() {
+                console.log("Outbound channel ");
+                var message = {command: "echo", count: 0, id:myId};
+                channel.send(JSON.stringify(message));
+                when = Date.now();
+                $('#friendList').hide();
+            };
+            channel.onmessage = onDcMessage;
+            pipe = channel;
+        }
+        $(document).ready(function() {
+            PipeDb.whoAmI(gotId, function(err) {
+                console.log("could not create identity " + err);
+            });
+        });
+    </script>
+    <div id="friendList">
+
+    </div>
+
+    <h3>Output</h3>
+    <div id="count">unknown </div>
+
+</body>
+</html>
