@@ -1,0 +1,93 @@
+<html><head><title>Echo test</title></head>
+    <!--script src=""></script>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script-->
+    <script src="js/require.js"></script>
+    <script src="js/jquery-1.8.3.js"></script>
+    <script src="js/phono.sdp.js"></script>
+    <script src="js/ipseorama.js"></script>
+    <script src="js/dc.js"></script>
+    <script src="js/adapter.js"></script>
+    <script type="text/javascript">
+        var myFinger = undefined;
+        var ipsed = null;
+        var chout;
+        var nonceS;
+        var friendList = {};
+        var mess ="";
+        var imagen =0;
+        var when =0;
+        var bulk ="";
+        var alpha="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ12345"
+
+        var sha256 = require("js/sha256");
+        for (var i=0;i<100;i++){
+            bulk+=alpha;
+        }
+        function setFriend(fing){
+            $('#tofinger').val(fing);
+        }
+        function showFriends(friends){
+            var pics = "<ol>";
+            friends.forEach(function (fr){
+                friendList[fr.finger] = fr;
+
+                pics += "<li><img src='"+fr.tag+"' onclick=\"makedc('"+fr.finger+"');\"></li>";
+            });
+            pics += "</ol>";
+            $('#friendList').html(pics);
+        }
+        function gotFinger(finger) {
+            myFinger = finger;
+            $('#myFinger').html(finger);
+            ipsed = new IpseDataChannel(finger);
+            ipsed.setOnDataChannel(onNewDc);
+            Ipseorama.dbListPrint(showFriends);
+        }
+        function onDcMessage(evt) {
+            console.log("got echo"+imagen++);
+            var now = Date.now();
+            var ticks = now - when;
+            var rate = (1000.0 * imagen) / ticks;
+            console.log("rate = "+rate);
+	    var message = {time: now, count:imagen, pad:bulk};
+            chout.send(JSON.stringify(message));
+        }
+        function onNewDc(channel) {
+            console.log("New DC ")
+            channel.onmessage = onDcMessage;
+        }
+        function makedc(tofinger) {
+            console.log("setting toFinger" + tofinger);
+
+            ipsed.setTo(tofinger);
+            ipsed.setNonce(nonceS);
+            var channel = ipsed.createDataChannel("echo", {});
+            channel.onopen = function() {
+                when = Date.now();
+                console.log("Outbound channel ");
+                var message = {time: when};
+                channel.send(JSON.stringify(message));
+                $('#friendList').hide();
+                $('#camera').show();
+            };
+            channel.onmessage = onDcMessage;
+            chout = channel;
+        }
+        $(document).ready(function() {
+            Ipseorama.whoAmI(gotFinger, function(err) {
+                console.log("could not create identity " + err);
+            });
+        });
+    </script>
+    <h1>remote echo</h1>
+    <div> My Fingerprint is :
+        <span id="myFinger">unknown</span> </div>
+    <div id="friendList">
+
+    </div>
+
+    <h3>Output</h3>
+    <canvas id="camera" width="640" height="360"/>
+
+</body>
+</html>

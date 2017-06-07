@@ -1,0 +1,168 @@
+<html>
+<head><title>Colour Pipes</title></head>
+<script src="js/require.js"></script>
+<script src="js/jquery-1.8.3.js"></script>
+<script src="js/phono.sdp.js"></script>
+<script src="js/ipseorama.js"></script>
+<script src="js/dc.js"></script>
+<script src="js/adapter.js"></script>
+
+<script type="text/javascript">
+    var myFinger = undefined;
+    var ipsed = null;
+    var channel;
+    var LEDCOUNT = 45;
+
+
+    var sha256 = require("js/sha256");
+    function setFriend(fing) {
+        showOnly(fing);
+        makedc(fing);
+    }
+    function showOnly(fing) {
+        Ipseorama.dbListPrint(function (friends) {
+                var pics = "<ul>";
+                friends.forEach(function (fr) {
+                    if (fr.finger === fing) {
+                        pics += "<li><img src='" + fr.tag + "'/>Connecting...</li>";
+                    }
+                });
+                pics += "</ul>";
+                $('#friendList').html(pics);
+            }
+        );
+    }
+    function showFriends(friends) {
+        var pics = "<ol>";
+        friends.forEach(function (fr) {
+            pics += "<li><img src='" + fr.tag + "' onclick=\"setFriend('" + fr.finger + "');\"/></li>";
+        });
+        pics += "</ol>";
+        $('#friendList').html(pics);
+    }
+    function gotFinger(finger) {
+        myFinger = finger;
+        ipsed = new IpseDataChannel(finger);
+        Ipseorama.dbListPrint(showFriends);
+    }
+
+    function update(pix) {
+        var values = [];
+        //console.log("pix ="+JSON.stringify(pix));
+        for (var i = 0; i < LEDCOUNT /3 ; i++) {
+            var offs = i*4;
+            var col = "0x"+pix[offs++].toString(16) + pix[offs++].toString(16) + pix[offs++].toString(16);
+            //console.log("pixelcolour "+col);
+
+            var pixc = parseInt(col);
+            // each tube is 3 leds
+            values.push(pixc);
+            values.push(pixc);
+            values.push(pixc);
+        }
+        var message = {
+            command: "paint",
+            pixels: values
+        };
+        //console.log("sending "+JSON.stringify(message));
+        channel.send(JSON.stringify(message));
+    }
+    function matchColours()
+    {
+        var video = document.getElementById('gumVideo');
+        var photo = document.getElementById('qr-canvas');
+        var context = photo.getContext('2d');
+
+
+        var tick = setInterval(function () {
+            if ((video.videoWidth > 0) && (video.videoHeight > 0)) {
+                var rat = video.height / video.videoHeight;
+                photo.width = video.videoWidth * rat;
+                photo.height = video.videoHeight * rat;
+                photo.height = video.videoHeight * rat;
+                context.drawImage(video, 0, 0, photo.width, photo.height);
+                x = (photo.width /2) - 2;
+                y = (photo.height /2) -2;
+                var imgd = context.getImageData(x, y, 4, 4);
+                var pix = imgd.data;
+                context.beginPath();
+                context.lineWidth="2";
+                context.strokeStyle="red";
+                context.rect(x-1,y-1,5,5);
+                context.stroke();
+                update(pix);
+            }
+        }, 200);
+    }
+    function startGum(sid) {
+        var constraints = {video: true, audio: false};
+        if (sid) {
+            constraints.video = {optional: [{sourceId: sid}]};
+        }
+        navigator.getUserMedia(constraints,
+            function (stream) {
+                var url = window.URL || window.webkitURL;
+                var v = document.getElementById('gumVideo');
+                v.src = url ? url.createObjectURL(stream) : stream;
+                v.play();
+                matchColours();
+            },
+            function (error) {
+                alert('Something went wrong. (error code ' + error.code + ')');
+                location.href = "nogum.htm";
+                return;
+            }
+        );
+    }
+    function onSourcesAcquired(sources) {
+        var sid;
+        for (var i = 0; i != sources.length; ++i) {
+            var source = sources[i];
+            console.log(source);
+            if ((source.kind == "videoinput") && (source.label.endsWith("back"))) {
+                sid = source.deviceId;
+            }
+        }
+        startGum(sid);
+    }
+    function askforCam() {
+        console.log("starting QR reader");
+        //frontcam...
+        var sid;
+        if ((typeof navigator.mediaDevices === 'undefined')
+            || (typeof navigator.mediaDevices.enumerateDevices == 'undefined')) {
+            startGum(sid);
+        } else {
+            navigator.mediaDevices.enumerateDevices().then(onSourcesAcquired);
+
+        }
+    }
+    function makedc(tofinger) {
+        ipsed.setTo(tofinger);
+        channel = ipsed.createDataChannel("opc:127.0.0.1:7890", {});
+        channel.onopen = function () {
+            askforCam();
+            $('#friendList').hide();
+        };
+        channel.onmessage = function (message) {
+        };
+        channel.onclose = function () {
+        };
+    }
+
+    $(document).ready(function () {
+        Ipseorama.whoAmI(gotFinger, function (err) {
+            console.log("could not create identity " + err);
+        });
+    });
+</script>
+<h1>Send colours to the sculpture</h1>
+<div id="friendList">
+
+</div>
+<div id="remoteVideoContainer" class="ui-video-remote-container">
+    <canvas width="320" height="240" id="qr-canvas"></canvas>
+    <video style="display:none;" width="320" height="240" id="gumVideo" autoplay="autoplay"/>
+</div>
+</body>
+</html>

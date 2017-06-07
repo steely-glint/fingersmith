@@ -1,0 +1,245 @@
+<html>
+<head>
+    <link href="/pipe.css" media="all" rel="stylesheet"/>
+    <title>Introduce a friend's browser to a device you own</title></head>
+<script src="js/require.js"></script>
+<script src="js/jquery-1.8.3.js"></script>
+<script src="js/phono.sdp.js"></script>
+<script src="js/pipeDuct.js"></script>
+<script src="js/pipeDb.js"></script>
+<script src="js/LazarQr.min.js"></script>
+<script src="js/gauge.js"></script>
+<script type="text/javascript">
+    var id = undefined;
+    var duct = null;
+    var pipe = null;
+    var nonceS;
+    var snap;
+    var friendId;
+    var deviceId;
+    var friendList = {};
+
+    var sha256 = require("js/sha256");
+    function deviceIntroAck(evt) {
+        console.log(evt.data);
+        var resp = JSON.parse(evt.data);
+        $('#friendList').hide();
+        if (resp.status === "ok") {
+            console.log("have introd " + friendId + "to " + deviceId);
+            $('#result').html("<H3>Success!</H3>");
+            var mess = {id: friendId, action: "accepted", page: "/"};
+            console.log("sending " + JSON.stringify(mess));
+            pipe.send(JSON.stringify(mess));
+        } else {
+            $('#result').html("<H3>The device did not accept intro - Reload this page to try again!</H3>");
+        }
+        // chout.close();
+    }
+    function deviceIntro() {
+        console.log("Now introing friend to device")
+        var duct2 = new PipeDuct(id, duct.getWs());
+        duct2.connect().then(function (d2) {
+            console.log("second duct made to device")
+            duct2.setOnDataChannel(onNewDc);
+            duct2.setTo(deviceId);
+            $('#result').html("<H3>Telling device about friend</H3>");
+            var channel = duct2.createDataChannel("cert", {});
+            channel.onopen = function () {
+                var cert = friendList[friendId].cert;
+                var tag = "data:,";
+                var mess = {id: friendId, action: "introduce", cert: cert, tag: tag};
+                console.log("sending " + JSON.stringify(mess));
+                channel.send(JSON.stringify(mess));
+            };
+            channel.onmessage = deviceIntroAck;
+        });
+    }
+    function introAck(evt) {
+        console.log(evt.data);
+        var resp = JSON.parse(evt.data);
+        if (resp.status === "ok") {
+            // next we target the device with the intro to our friend.
+            console.log("have introd " + deviceId + "to " + friendId);
+            deviceIntro();
+        } else {
+            console.log("problem with intro " + evt.data);
+        }
+    }
+    function showOnly(fing) {
+        PipeDb.dbListPrint(function (friends) {
+                var pics = "<ul>";
+                friends.forEach(function (fr) {
+                    if (fr.id === fing) {
+                        pics += "<li><img src='" + fr.tag + "'/>Introducing...</li>";
+                    }
+                });
+                pics += "</ul>";
+                $('#friendList').html(pics);
+            }
+        );
+    }
+    function setDevice(fing) {
+        deviceId = fing;
+        console.log("introing device " + deviceId + " to friend " + friendId);
+        var cert = friendList[deviceId].cert;
+        var tag = friendList[deviceId].tag;
+        if (!tag) {
+            tag = friendId; // do a robohash here.....
+        }
+        showOnly(fing);
+        var mess = {id: deviceId, action: "introduce", cert: cert, tag: tag};
+        pipe.onmessage = introAck;
+        console.log("sending " + JSON.stringify(mess));
+        pipe.send(JSON.stringify(mess));
+    }
+    function showDevices(friends) {
+        var pics = "<h3>Devices</h3><ol>";
+        friends.forEach(function (fr) {
+            friendList[fr.finger] = fr;
+            if (friendId != fr.finger) {
+                pics += "<li><img src='" + fr.tag + "' onclick=\"setDevice('" + fr.finger + "');\"></li>";
+            }
+        });
+        pics += "</ol>";
+        $('#friendList').html(pics);
+        $('#result').html("<H3>Choose a device</H3");
+    }
+
+    function listAck(evt) {
+        console.log(evt.data);
+        var resp = JSON.parse(evt.data);
+        if (resp.status === "ok") {
+            duct.addRemote(snap, function () {
+                PipeDb.dbListPrint(showDevices);
+            });
+        } else {
+            console.log("problem with claim " + evt.data);
+        }
+    }
+    function onNewDc(channel) {
+        console.log("New inbound DC ???")
+    }
+    function makedc() {
+        console.log("setting friendId" + friendId);
+        duct.setTo(friendId);
+        duct.setNonce(nonceS);
+        var channel = duct.createDataChannel("cert", {});
+        channel.onopen = function () {
+            $('#result').html("<H3>Connected to friend's phone...</H3");
+            var jmess = JSON.stringify({id: "1", action: "list"});
+            console.log("sending " + jmess);
+            channel.send(jmess);
+        };
+        channel.onmessage = listAck;
+        pipe = channel;
+    }
+
+
+    function startQrDecode() {
+        var video = document.getElementById('gumVideo');
+        var photo = document.getElementById('qr-canvas');
+        var context = photo.getContext('2d');
+        // set our canvas to the same size as our video
+
+        qrcode.callback = function (code) {
+            console.log("got qrcode of " + code);
+            clearInterval(tick);
+            navigator.vibrate(50);
+            var fparts = code.split(":");
+            friendId = fparts[0];
+            nonceS = fparts[1];
+            console.log("nonce = " + nonceS);
+            for (var i = 1; i < 10; i++) {
+                var q = 1.0 - (0.1 * i);
+                snap = photo.toDataURL('image/jpeg', q);
+                console.log("snap encoded at q=" + q + " of size " + snap.length)
+                if (snap.length < 60000) {
+                    break;
+                }
+            }
+            $("#qr-canvas").remove();
+            $("#gumVideo").css("display", "none");
+            $('#result').html("<H3>Scan ok - connecting to friend's phone...</H3>");
+            makedc();
+        };
+        var tick = setInterval(function () {
+            if ((video.videoWidth > 0) && (video.videoHeight > 0)) {
+                var rat = video.height / video.videoHeight;
+                photo.width = video.videoWidth * rat;
+                photo.height = video.videoHeight * rat;
+                console.log("set photo to " + photo.width + " x " + photo.height);
+                console.log("rat was " + rat);
+                context.drawImage(video, 0, 0, photo.width, photo.height);
+                qrcode.decode();
+            }
+        }, 250);
+    }
+    function startGum(sid) {
+        var constraints = {video: true, audio: false};
+        if (sid) {
+            constraints.video = {optional: [{sourceId: sid}]};
+        }
+        navigator.mediaDevices.getUserMedia(constraints).then(
+            function (stream) {
+                var url = window.URL || window.webkitURL;
+                var v = document.getElementById('gumVideo');
+                v.src = url ? url.createObjectURL(stream) : stream;
+                v.play();
+                startQrDecode();
+            }).catch(function (error) {
+                alert('Something went wrong. (error code ' + error.code + ')');
+                location.href = "nogum.htm";
+                return;
+            }
+        );
+    }
+    function onSourcesAcquired(sources) {
+        var sid;
+        for (var i = 0; i != sources.length; ++i) {
+            var source = sources[i];
+            console.log(source);
+            if ((source.kind == "videoinput") && (source.label.endsWith("back"))) {
+
+                sid = source.deviceId;
+            }
+        }
+        startGum(sid);
+    }
+    function askforCam() {
+        console.log("starting QR reader");
+        //frontcam...
+        var sid;
+        if ((typeof navigator.mediaDevices === 'undefined')
+            || (typeof navigator.mediaDevices.enumerateDevices == 'undefined')) {
+            startGum(sid);
+        } else {
+            navigator.mediaDevices.enumerateDevices().then(onSourcesAcquired);
+
+        }
+    }
+    function gotId(gid) {
+        id = gid;
+        var d = new PipeDuct(id);
+        d.connect().then(function (d) {
+            duct =d;
+            duct.setOnDataChannel(onNewDc);
+            askforCam();
+        });
+    }
+    $(document).ready(function () {
+        PipeDb.whoAmI(gotId, function (err) {
+            console.log("could not create identity " + err)
+        });
+    });
+</script>
+<h1>Introduce a friend's browser to a device you own</h1>
+<div id="remoteVideoContainer" class="ui-video-remote-container">
+    <canvas width="320" height="240" id="qr-canvas"></canvas>
+    <video style="display:none;" width="320" height="240" id="gumVideo" autoplay="autoplay"/>
+</div>
+<div id="friendList"></div>
+<div id="result"> Scan a friend's smartphone.</div>
+
+
+</body>
+</html>

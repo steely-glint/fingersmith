@@ -1,0 +1,109 @@
+<html><head>
+<title>Share my browser</title></head>
+    <!--meta name="viewport" content="width=device-width"-->
+
+    <script src="js/require.js"></script>
+    <script src="js/jquery-1.8.3.js"></script>
+    <script src="js/phono.sdp.js"></script>
+    <script src="js/pipeDb.js"></script>
+    <script src="js/pipeDuct.js"></script>
+    <script src="js/qrcode.js"></script>
+ <script type="text/javascript">
+        var id = undefined;
+        var duct = null;
+        var pipe;
+
+
+        var sha256 = require("js/sha256");
+
+        function createHexString(arr) {
+            var result = "";
+            var z;
+
+            for (var i = 0; i < arr.length; i++) {
+                var str = arr[i].toString(16);
+
+                z = 2 - str.length + 1;
+                str = Array(z).join("0") + str;
+
+                result += str;
+            }
+
+            return result.toUpperCase();
+        }
+
+        function mkNonce() {
+            var buf = new Uint8Array(16);
+            window.crypto.getRandomValues(buf);
+            var ret = createHexString(buf);
+            return ret;
+        }
+        function gotId(liid) {
+            id = liid;
+            duct = new PipeDuct(id);
+            duct.setOnDataChannel(onNewDc);
+            var myid = id + ":" + mkNonce();
+            console.log("mk qr of " + myid);
+            var qrcode = new QRCode(document.getElementById("qr"), {
+                width: 480,
+                height: 480,
+                correctLevel: QRCode.CorrectLevel.L
+            });
+            duct.connect().then(function (d) {
+                console.log("connected as " + id);
+                qrcode.makeCode(myid);
+            });
+        }
+        function onDcMessage(evt) {
+            //console.log(evt.data);
+            var req = JSON.parse(evt.data);
+            if (req.action === "list") {
+                // hack - we should be doing a load of checks first
+                duct.addRemote(null, function() {
+                    var rep = {status: "ok"};
+                    pipe.send(JSON.stringify(rep));
+                    $('#result').html("<H3>Added friend's phone...</H3>");
+                });
+
+            }
+            if (req.action === "introduce") {
+                //{id: fing, action: "introduce", cert: cert};
+                var printncert = {finger: req.id, cert: req.cert, tag: req.tag};
+                dcb = function() {
+                    var rep = {status: "ok"};
+                    console.log("added friend print" + req.id);
+                    pipe.send(JSON.stringify(rep));
+                    $('#result').html("<H3>Added friend's device.</H3>");
+                }
+                console.log("adding friend print" + req.id);
+                $('#result').html("<H3>Added friend's device...</H3>");
+                PipeDb.dbAddPrint(printncert, dcb);
+            }
+            if (req.action === "accepted") {
+                $('#result').html("<H3>Congratulations. You now have access to your friend's device.</H3>");
+                pipe.close();
+            }
+        }
+        function onNewDc(channel) {
+            console.log("New DC " + channel.label);
+            $('#qr').hide();
+            $('#result').html("<H3>Scan ok - connected to friend's phone...</H3>");
+            channel.onmessage = onDcMessage;
+            pipe = channel;
+        }
+        $(document).ready(function() {
+            PipeDb.whoAmI(gotId, function(err) {
+                console.log("could not create identity " + err)
+            });
+        });
+    </script>
+    <h1>Share this device by scanning it with another.</h1>
+    <div id="qr" class="qr">
+
+    </div>
+    <div id="result"> Get scanned by a friend's smartphone to join their network.</div>
+
+
+
+</body>
+</html>

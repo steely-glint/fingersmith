@@ -1,0 +1,55 @@
+<html><head>
+<title>Share my browser</title></head>
+    <meta name="viewport" content="width=device-width">
+
+    <script src="js/require.js"></script>
+    <script src="js/jquery-1.8.3.js"></script>
+    <script src="js/phono.sdp.js"></script>
+    <script src="js/ipseorama.js"></script>
+    <script src="js/dc.js"></script>
+    <script src="js/qrcode.js"></script>
+
+    <script src="js/adapter.js"></script>
+    <script type="text/javascript">
+        var ipsed = null;
+        var chan;
+        var snap;
+
+        var sha256 = require("js/sha256");
+
+        function gotFinger(finger) {
+            myFinger = finger;
+            ipsed = new IpseDataChannel(finger);
+            ipsed.setOnDataChannel(onNewDc);
+            var tag = "https://robohash.org/"+finger+".jpg?size=320x240&ignoreext=false";
+	    $('#me').html("<img src='"+tag+"'/>");
+        }
+        function onDcMessage(evt) {
+            //console.log(evt.data);
+            var req = JSON.parse(evt.data);
+            console.log(req.count);
+            chan.send(evt.data);
+        }
+        function onNewDc(channel) {
+            console.log("New DC " + channel.label);
+            $('#result').html("<H3>Echoing...</H3>");
+
+            channel.onmessage = onDcMessage;
+            chan = channel;
+        }
+        $(document).ready(function() {
+            Ipseorama.whoAmI(gotFinger, function(err) {
+                console.log("could not create identity " + err)
+            });
+        });
+    </script>
+    <h1>echo to this browser window</h1>
+    <div id="me" />
+    
+
+    <div id="result"> waiting for echotest.</div>
+
+
+
+</body>
+</html>

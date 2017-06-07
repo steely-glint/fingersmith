@@ -1,0 +1,114 @@
+<html><head><title>Shell</title>
+        <script src="js/jquery-1.8.3.js"></script>
+        <script src="js/phono.sdp.js"></script>
+        <script src="js/pipeDb.js"></script>
+        <script src="js/pipeDuct.js"></script>
+        <script type="text/javascript">
+            var pipe = null;
+            var chout;
+
+
+            function setFriend(fing) {
+                showOnly(fing);
+                makedc(fing);
+            }
+            function showOnly(fing) {
+                PipeDb.dbListPrint(function(friends) {
+                    var pics = "<ul>";
+                    friends.forEach(function(fr) {
+                        if (fr.finger === fing) {
+                            pics += "<li><img src='" + fr.tag + "'/>Connecting...</li>";
+                        }
+                    });
+                    pics += "</ul>";
+                    $('#friendList').html(pics);
+                }
+                );
+            }
+            function showFriends(friends) {
+                var pics = "<ol>";
+                friends.forEach(function(fr) {
+                    pics += "<li><img src='" + fr.tag + "' onclick=\"setFriend('" + fr.finger + "');\"/></li>";
+                });
+                pics += "</ol>";
+                $('#friendList').html(pics);
+            }
+            function gotFinger(id) {
+                pipe = new PipeDuct(id);
+                PipeDb.dbListPrint(showFriends);
+                $('#remote').hide();
+            }
+            
+            function onDcMessage(evt) {
+                var mess = evt.data;
+                var jval = JSON.parse(mess);
+                if (jval.stdout) {
+                  var h = $('#stdout').html()+"<br/>"+jval.stdout
+                  $('#stdout').html(h)
+                }
+                if (jval.stderr) {
+		console.log("stderr"+jval.stderr);
+                  $('#stderr').html(jval.stderr);
+                }
+            }
+            function sendLine() {
+                var value = $('#shellin').val();
+                var message = {command: "write"};
+                message.text = value;
+                console.log("sending "+JSON.stringify(message));
+                shell.send(JSON.stringify(message));
+            }
+            var  shell = null;
+
+            function makedc(tofinger) {
+                console.log("setting toFinger" + tofinger);
+                pipe.setTo(tofinger);
+                shell = pipe.createDataChannel("shell", {});
+                shell.onopen = function() {
+                    console.log("Outbound channel ");
+                    $('#friendList').hide();
+                    $('#remote').show();
+                    $('#shell').onchange=sendLine;
+                };
+                shell.onmessage = onDcMessage;
+                shell.onclose = function() {
+                    $('#friendList').show();
+                    pipe = null;
+                }
+            }
+
+
+            $(document).ready(function() {
+                PipeDb.whoAmI(gotFinger, function(err) {
+                    console.log("could not create identity " + err);
+                });
+            });
+        </script>
+    </head>
+    <body>
+        <h1>Shell </h1>
+        <div id="friendList">
+
+        </div>
+<div>
+<button onclick="sendLine('uvcdynctrl -s \'Zoom, Absolute\' 100')">Zoom in</button>
+<button onclick="sendLine('uvcdynctrl -s \'Zoom, Absolute\' 1000')">Zoom in</button>
+<button onclick="sendLine('uvcdynctrl -s \'Pan (relative)\' 200')">Pan +</button>
+<button onclick="sendLine('uvcdynctrl -s \'Pan (relative)\' -- -200')">Pan -</button>
+<button onclick="sendLine('uvcdynctrl -s \'Tilt (relative)\' 100')">Tilt +</button>
+<button onclick="sendLine('uvcdynctrl -s \'Tilt (relative)\' -- -100')">Tilt -</button>
+
+</div>
+
+        <h3>Output</h3>
+        <div id='remote'>
+    		<form onsubmit="sendLine();return false;">
+                <input type="text" name="shell" id="shellin" value="date"/>
+    		</form>
+		<br/>
+	        output text :<br/> <code id="stdout"></code>
+		<br/>
+	        error text :<div id="stderr"></div>
+        </div>
+    </body>
+</html>
