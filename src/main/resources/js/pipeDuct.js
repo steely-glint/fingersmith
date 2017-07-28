@@ -8,6 +8,7 @@ function PipeDuct(finger,oldws) {
     this.nonceS = null;
     this.nonsense = "";
     this.candyStash = [];
+    this.candyRStash = [];
     this.openTimer;
     this.patches = [];
     this.sdpConstraints = {'mandatory': {'OfferToReceiveAudio': false, 'OfferToReceiveVideo': false}}
@@ -120,12 +121,20 @@ PipeDuct.prototype.makeWs = function (resolve) {
                 console.log("adding candidate " + JSON.stringify(jc));
                 var nc = "Huh? ";
                 nc = new RTCIceCandidate(jc);
-                pc.addIceCandidate(nc);
+                if (pc.signalingState == 'stable') {
+                   pc.addIceCandidate(nc);
+                } else {
+                   console.log("stashing remote")
+                   that.candyRStash.push(nc);
+                } 
             }
             if ((data.type == 'offer') || (data.type == 'answer')) {
                 var sdp = Phono.sdp.buildSDP(data.sdp);
                 if(that.patches[data.type]){
                     sdp = Phono.sdp.patch(sdp,that.patches[data.type]).sdp;
+                } else if (pc.signalingState == 'stable') {
+                   console.log("already stable");
+                   return;
                 }
                 console.log("sent sdp is " + sdp);
                 if (window.showStatus) {
@@ -207,6 +216,11 @@ PipeDuct.prototype.withPc = function (pc,promise) {
             while (can = that.candyStash.pop()) {
                 console.log("popping candidate off stash")
                 that.sendCandy(can);
+            }
+            var nc;
+            while (nc = that.candyRStash.pop()) {
+                console.log("popping Remote candidate off stash")
+                pc.addIceCandidate(nc);
             }
         }
     };
@@ -319,7 +333,7 @@ PipeDuct.prototype.sendSDP = function (pc) {
             }
         }
     };
-    this.openTimer = setInterval(sendFunc, 5000);
+    this.openTimer = setInterval(sendFunc, 15000);
     sendFunc();
 }
 
