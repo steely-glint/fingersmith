@@ -35,6 +35,23 @@ PipeDuct.prototype.connect = function() {
     });
     return promise;
 }
+PipeDuct.prototype.tohex = function(buffer) {
+  var hexCodes = [];
+  var view = new DataView(buffer);
+  for (var i = 0; i < view.byteLength; i += 4) {
+    // Using getUint32 reduces the number of iterations needed (we process 4 bytes each time)
+    var value = view.getUint32(i)
+    // toString(16) will give the hex representation of the number without padding
+    var stringValue = value.toString(16)
+    // We use concatenation and slice for padding
+    var padding = '00000000'
+    var paddedValue = (padding + stringValue).slice(-padding.length)
+    hexCodes.push(paddedValue);
+  }
+
+  // Join all the hex strings into one
+  return hexCodes.join("");
+}
 PipeDuct.prototype.getWs = function () {
     return this.ws;
 }
@@ -62,7 +79,11 @@ PipeDuct.prototype.makeWs = function (resolve) {
     if (host.includes("localhost")){ //debugging typically
         host="pi.pe";
         protocol="wss:";
-    }
+    } 
+    if (host.includes("github.io")){ //poc typically
+        host="pi.pe";
+        protocol="wss:";
+    } 
 
     // reuse of existing ws.
     if (this.ws != null){
@@ -245,8 +266,22 @@ PipeDuct.prototype.addRemote = function (tag,done) {
 
 
 };
+/*function sha256(str) {
+  // We transform the string into an arraybuffer.
+  var buffer = new TextEncoder("utf-8").encode(str);
+  return crypto.subtle.digest("SHA-256", buffer).then(function (hash) {
+    return hex(hash);
+  });
+} */
 PipeDuct.prototype.setNonce = function (n) {
     this.nonceS = n;
+    var that = this;
+    var sense =this.toFinger + ":" + this.nonceS + ":" + this.myFinger; 
+    console.log("sense : "+ sense); 
+    var buffer = new TextEncoder("utf-8").encode(sense);
+    return crypto.subtle.digest("SHA-256", buffer).then(function (hash) {
+        that.nonsense = that.tohex(hash).toUpperCase();
+    });
 };
 PipeDuct.prototype.setOnDataChannel = function (callback) {
     this.ondatachannel = function (evt) {
@@ -258,9 +293,6 @@ PipeDuct.prototype.sendSDP = function (pc) {
 
     var sdpObj = Phono.sdp.parseSDP(pc.localDescription.sdp);
     console.log("this.toFinger:" + this.toFinger);
-    if (this.nonceS) {
-        this.nonsense = sha256.hash(this.toFinger + ":" + this.nonceS + ":" + this.myFinger).toUpperCase();
-    }
     var sdpcontext = {
         "to": this.toFinger,
         "from": this.myFinger,
