@@ -17,8 +17,7 @@
 
         var sha256 = require("js/sha256");
         function setFriend(fing){
-            $('#tofinger').val(fing);
-            makedc();
+            makedc(fing);
 	    $('#friendList').hide();
         }
         function showFriends(friends){
@@ -31,7 +30,6 @@
         }
         function gotFinger(finger) {
             myFinger = finger;
-            $('#myFinger').html(finger);
             ipsed = new IpseDataChannel(finger);
             ipsed.setOnDataChannel(onNewDc);
             Ipseorama.dbListPrint(showFriends);
@@ -41,7 +39,7 @@
             var jval = JSON.parse(mess);
             var voltage = jval.value /1000.0;
             battery.setValue(voltage);
-            if (voltage > 2.0){
+            if (voltage > 3.5){
                $('#occupy').html("Occupied");
             } else {
                $('#occupy').html("Available");
@@ -51,13 +49,12 @@
             console.log("New DC ")
             channel.onmessage = onDcMessage;
         }
-        function makedc() {
-            var tofinger = $('#tofinger').val();
+        function makedc(tofinger) {
             console.log("setting toFinger" + tofinger);
 
             ipsed.setTo(tofinger);
             ipsed.setNonce(nonceS);
-            var channel = ipsed.createDataChannel("in_voltage0_raw", {});
+            var channel = ipsed.createDataChannel("in_voltage5_raw", {});
             channel.onopen = function() {
                 console.log("Outbound channel ");
                 var message = {command: "start"};
@@ -94,22 +91,15 @@
                 console.log("could not create identity " + err);
             });
             var bhigh = [{from: 0.0, to: 0.5 , color: '#e00'}, {from: 0.5, to: 1.0, color: '#ccc'}, {from: 1.0, to: 2.5, color: '#0a0'}];
-            battery = makeGauge("Voltage", 0.0, 2.5, "Volts", "Range", [0.0, 0.5, 1.0, 1.5, 2.0, 2.5], {int: 1, dec: 1}, 0.0, bhigh);
+            battery = makeGauge("Voltage", 0.0, 5.0, "Volts", "Range", [0.0, 0.5, 1.0, 1.5, 2.0, 2.5,3.0,3.5,4.0,4.5,5.0], {int: 1, dec: 1}, 0.0, bhigh);
         });
     </script>
-    <h1>PIPE gauge</h1>
-    <div> My Fingerprint is :
-        <span id="myFinger">unknown</span> </div>
+    <h1>|pipe| parking sensor</h1>
     <div style="font-size:64px" id="occupy">status...</div>
     <div id="friendList">
 
     </div>
-    <form onsubmit="return false;">
-        <input type="text" name="to" id="tofinger" value="F935BCF78C5ED2C9C27138A557F32F8FD788B25F3D3ED2409560A9A7E93F1899"/>
-        <input type="button" value="connect" onclick="makedc();" />
-    </form>
-
-    <h3>Output</h3>
+    <h3>Sensor</h3>
     <div id="gaugeContainer">
         <canvas class="gauge" id="Voltage"></canvas>
     </div>
