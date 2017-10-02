@@ -41,7 +41,7 @@ if (!window.indexedDB) {
         },
         createCert: function(app, doneCB) {
             console.log("create a new cert");
-            let certParams ={
+            var certParams ={
                 name: "RSASSA-PKCS1-v1_5",
                 modulusLength: 2048,
                 publicExponent: new Uint8Array([1, 0, 1]),
@@ -267,7 +267,7 @@ if (!window.indexedDB) {
         },
 
         whoAmI: function(okCB, failCB) {
-            let peerconfig = {"iceServers": [{url: "stun:stun.l.google.com:19302"}]};
+            var peerconfig = {"iceServers": [{url: "stun:stun.l.google.com:19302"}]};
             /*let offerConstraints = {mandatory: {
                 OfferToReceiveVideo: false,
                 OfferToReceiveAudio: false,
@@ -276,11 +276,11 @@ if (!window.indexedDB) {
                 var pc = new RTCPeerConnection(peerconfig, null);
                 pc.createDataChannel('channel', {});
                 pc.createOffer()
-                    .then(localDesc => {
+                    .then(function(localDesc){
                         var myfp = getFinger(localDesc.sdp);
                         okCB(myfp);
                     })
-                    .catch(error => {failCB(error);});
+                    .catch(function(error){failCB(error);});
             });
         }
     }
