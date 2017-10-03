@@ -12,15 +12,7 @@ function PipeDuct(finger,oldws) {
     this.openTimer;
     this.patches = [];
     this.sdpConstraints = {'mandatory': {'OfferToReceiveAudio': false, 'OfferToReceiveVideo': false}}
-
-
-
-}
-PipeDuct.prototype.connect = function() {
-    var that = this;
-
-    var promise = new Promise(function(resolve, reject) {
-            var configuration = {
+    this.configuration = {
                 "iceServers": [
                     {urls: "stun:146.148.121.175:3478"},
                     {urls: "turn:146.148.121.175:3478?transport=udp", 'credential': 'nexus5x', 'username': 'smartphone'},
@@ -29,8 +21,15 @@ PipeDuct.prototype.connect = function() {
                 "bundlePolicy":"max-bundle","iceCandidatePoolSize":1
             };
 
-            PipeDb.addMyCertToPeerConf(configuration, function () {
-                var wcpc = new RTCPeerConnection(configuration, null)
+
+}
+PipeDuct.prototype.connect = function() {
+    var that = this;
+
+    var promise = new Promise(function(resolve, reject) {
+
+            PipeDb.addMyCertToPeerConf(that.configuration, function () {
+                var wcpc = new RTCPeerConnection(that.configuration, null)
                 that.withPc(wcpc, resolve);
             });
     });
