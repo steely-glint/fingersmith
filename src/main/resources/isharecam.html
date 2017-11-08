@@ -1,0 +1,195 @@
+<html><head>
+<title>Share my device with an iPhone</title></head>
+<meta name="viewport" content="width=device-width">
+<link href="https://pi.pe/pipe.css" media="all" rel="stylesheet" />
+
+<style type="text/css">
+    img{border:thick solid white;}
+</style>
+    <script src="js/jquery-1.8.3.js"></script>
+    <script src="js/phono.sdp.js"></script>
+<script type="text/javascript">
+    (function () {
+        function getFinger(descsdp) {
+            var sdp = Phono.sdp.parseSDP(descsdp)
+            var myfp = JSON.stringify(sdp.contents[0].fingerprint.print);
+            myfp = myfp.split(":").join("");
+            myfp = myfp.split('"').join("");
+            console.log("fingerprint is " + myfp)
+            return myfp;
+        };
+
+        PipeDb = {
+            addMyCertToPeerConf: function (peerconf, mkpc) {
+                mkpc();
+            },
+            dbAddPrint: function(print, doneCB) {
+                console.log("pretending to Add a new print ");
+                doneCB(print);
+            },
+            whoAmI: function (okCB, failCB) {
+                var peerconfig = {
+                    "iceServers": [
+                        {urls: "stun:146.148.121.175:3478"},
+                        {urls: "turn:146.148.121.175:3478?transport=udp", 'credential': 'nexus5x', 'username': 'smartphone'},
+                    ],
+                    "bundlePolicy":"max-bundle","iceCandidatePoolSize":1
+                };
+                var pc = new RTCPeerConnection(peerconfig, null);
+                pc.createDataChannel('echo', {});
+                pc.createOffer()
+                    .then(function (localDesc) {
+                        var myfp = getFinger(localDesc.sdp);
+                        okCB(myfp,pc);
+                    })
+                    .catch(function (error) {
+                        failCB(error);
+                    });
+            }
+        };
+    }());
+</script>
+    <script src="js/pipeDuct.js"></script>
+    <script src="js/qrcode.js"></script>
+ <script type="text/javascript">
+        var id = undefined;
+        var duct = null;
+        var pipe;
+        var mess ="";
+        var imagen =0;
+        var img = new Image();
+        var when =0;
+        function showSpeed(){
+            var ticks = Date.now() - when;
+            var rate = (1000.0 * imagen) / ticks;
+            console.log("rate = "+rate);
+        }
+        function onDcMessage(evt) {
+            mess +=evt.data;
+            if (mess.endsWith("}")){
+                var jval = JSON.parse(mess);
+                mess="";
+                var framedata = 'data:image/jpeg;base64,' +jval.frame;
+                img.onload = function(){
+                    var ctx = document.getElementById('camera').getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                }
+                img.src=framedata;
+                if(jval.framecount) {
+                    console.log("framecount "+jval.framecount);
+                }
+                console.log("got image "+imagen++);
+                showSpeed();
+                window.setTimeout( function(){
+                    var message = {command: "read"};
+                    pipe.send(JSON.stringify(message));
+                },50);
+            }
+        }
+        function onNewDc(channel) {
+            console.log("New DC ")
+            channel.onmessage = onDcMessage;
+        }
+        function fakeonn(){
+            var pc = duct.peerCon;
+            var that = duct;
+            pc.createOffer(that.sdpConstraints).then(desc => {
+                pc.setLocalDescription(desc).then( _ => {
+                    console.log("Set Local description");
+                    that.sendSDP(pc);
+                });
+            }).catch (that.logError);
+        }
+        function makedc(toId) {
+            console.log("setting to" + toId);
+
+            duct.setTo(toId);
+            var channel = duct.createDataChannel("camera", {});
+            fakeonn();
+            channel.onopen = function() {
+                console.log("Outbound channel ");
+                var message = {command: "read"};
+                console.log("sending "+JSON.stringify(message));
+                channel.send(JSON.stringify(message));
+                when = Date.now();
+                $('#camera').show();
+            };
+            channel.onmessage = onDcMessage;
+            pipe = channel;
+        }
+        function createHexString(arr) {
+            var result = "";
+            var z;
+
+            for (var i = 0; i < arr.length; i++) {
+                var str = arr[i].toString(16);
+
+                z = 2 - str.length + 1;
+                str = Array(z).join("0") + str;
+
+                result += str;
+            }
+
+            return result.toUpperCase();
+        }
+
+        function mkNonce() {
+            var buf = new Uint8Array(16);
+            window.crypto.getRandomValues(buf);
+            var ret = createHexString(buf);
+            return ret;
+        }
+        function onextra(x){
+            console.log("got extra over ws "+JSON.stringify(x));
+            if ((x.action) && (x.id)){
+                if (x.action === "introduce"){
+                    $('#qr').hide();
+                    $('#result').html("<H3>Scan ok - introduced to friend's device...</H3>");
+                    makedc(x.id);
+                }
+            }
+        }
+        function gotId(liid,wcpc) {
+            id = liid;
+            duct = new PipeDuct(id);
+            duct.connect = function() {
+                var that = this;
+
+                var promise = new Promise(function(resolve, reject) {
+                    that.withPc(wcpc, resolve);
+                    // insert extra message handler here.
+                });
+                return promise;
+            };
+            duct.setOnextra(onextra);
+            duct.setOnDataChannel(onNewDc);
+            var myid = id + ":" + mkNonce();
+            console.log("mk qr of " + myid);
+            var qrcode = new QRCode(document.getElementById("qr"), {
+                width: 480,
+                height: 480,
+                correctLevel: QRCode.CorrectLevel.M
+            });
+            duct.connect().then(function (d) {
+                console.log("connected as " + id);
+                qrcode.makeCode(myid);
+            });
+        }
+
+        $(document).ready(function() {
+            PipeDb.whoAmI(gotId, function(err) {
+                console.log("could not create identity " + err)
+            });
+        });
+    </script>
+    <h1>Share this device by scanning it with another.</h1>
+    <div id="qr" class="qr">
+
+    </div>
+    <div id="result"> Get this scanned by a friend's iPhone (ios 11) to borrow their webcamera.</div>
+    <canvas id="camera" width="640" height="360"/>
+
+
+
+</body>
+</html>

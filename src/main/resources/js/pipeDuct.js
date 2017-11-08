@@ -10,6 +10,7 @@ function PipeDuct(finger,oldws) {
     this.candyStash = [];
     this.candyRStash = [];
     this.openTimer;
+    this.onextra;
     this.patches = [];
     this.sdpConstraints = {'mandatory': {'OfferToReceiveAudio': false, 'OfferToReceiveVideo': false}}
     this.configuration = {
@@ -51,6 +52,9 @@ PipeDuct.prototype.tohex = function(buffer) {
 
   // Join all the hex strings into one
   return hexCodes.join("");
+}
+PipeDuct.prototype.setOnextra = function (extract) {
+    return this.onextra = extract;
 }
 PipeDuct.prototype.getWs = function () {
     return this.ws;
@@ -131,10 +135,10 @@ PipeDuct.prototype.makeWs = function (resolve) {
                 var sdp = Phono.sdp.buildSDP(data.sdp);
                 if(that.patches[data.type]){
                     sdp = Phono.sdp.patch(sdp,that.patches[data.type]).sdp;
-                } else if (pc.signalingState == 'stable') {
+                } /*else if (pc.signalingState == 'stable') {
                    console.log("already stable");
                    return;
-                }
+                }*/
                 console.log("sent sdp is " + sdp);
                 if (window.showStatus) {
                     showStatus("Got "+data.type);
@@ -143,7 +147,7 @@ PipeDuct.prototype.makeWs = function (resolve) {
                 var rtcd;
                 rtcd = new RTCSessionDescription(message);
                 console.log("rtcd is " + rtcd);
-                pc.setRemoteDescription(rtcd, function () {
+                pc.setRemoteDescription(rtcd).then(function () {
                     console.log("set " + data.type + " ok");
                     if (data.type == 'offer') {
                         var theirfp = JSON.stringify(data.sdp.contents[0].fingerprint.print);
@@ -152,22 +156,26 @@ PipeDuct.prototype.makeWs = function (resolve) {
                         console.log("their fingerprint is " + theirfp)
                         that.setTo(theirfp);
                         this.session = data.session;
-                        pc.createAnswer(function (desc) {
-                            pc.setLocalDescription(desc, function () {
+                        pc.createAnswer().then(function (desc) {
+                            pc.setLocalDescription(desc).then ( function () {
                                 console.log("Set Local description");
                                 that.sendSDP(pc);
-                            }, function (e) {
+                            }).catch( function (e) {
                                 console.log("Set Local description error " + e);
                             });
-                        }, function (e) {
+                        }).catch( function (e) {
                             console.log("Create answer error " + e);
                         });
                     }
-                }, function (e) {
+                }).catch( function (e) {
                     console.log("Set Remote description error " + e);
                 });
             }
-        } else {
+            if (data.type == 'extra') {
+                if (data.extra && that.onextra)
+                that.onextra(data.extra);
+            }
+            } else {
             console.log("no session in my data");
         }
     };

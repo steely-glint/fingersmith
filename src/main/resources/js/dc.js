@@ -58,10 +58,16 @@ IpseDataChannel.prototype.makeWs = function () {
         protocol = "wss:"
     }
     host = window.location.host;
-    port = "";
-    if (window.location.port != "") {
-        port = ":" + window.location.port
+
+    if (host.includes("localhost")){ //debugging typically
+        host="pi.pe";
+        protocol="wss:";
     }
+    if (host.includes("github.io")){ //poc typically
+        host="pi.pe";
+        protocol="wss:";
+    }
+
     // reuse of existing ws.
     if (this.ws != null){
         socket = this.ws;

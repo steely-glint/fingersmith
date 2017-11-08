@@ -1,0 +1,200 @@
+<html><head>
+<link href="/pipe.css" media="all" rel="stylesheet" />
+<title>Lend a device you own to an iphone user</title></head>
+    <script src="js/require.js"></script>
+    <script src="js/jquery-1.8.3.js"></script>
+    <script src="js/phono.sdp.js"></script>
+    <script src="js/ipseorama.js"></script>
+    <script src="js/dc.js"></script>
+    <script src="js/LazarQr.min.js"></script>
+    <script src="js/adapter.js"></script>
+    <script src="js/gauge.js"></script>
+    <script type="text/javascript">
+        var myFinger = undefined;
+        var chout;
+        var nonceS;
+        var friendFinger;
+        var deviceFinger;
+        var friendList = {};
+        var id2;
+
+        var sha256 = require("js/sha256");
+
+        function sendAwake(){
+            var ws = id2.getWs();
+            var d = new Date();
+            var n = d.getTime();
+            var session = myFinger + "-" + friendFinger + "-" + n;
+            var message = {
+                "to": friendFinger,
+                "from": myFinger,
+                "type": "extra",
+                "extra": {id: deviceFinger, action: "introduce"},
+                "session": session,
+                "nonsense": "" // should use this.
+            };
+            ws.send(JSON.stringify(message));
+        }
+        function deviceIntroAck(evt) {
+            console.log(evt.data);
+            var resp = JSON.parse(evt.data);
+            $('#friendList').hide();
+            if (resp.status === "ok") {
+                console.log("have introd " + friendFinger + "to " + deviceFinger);
+                sendAwake();
+                $('#result').html("<H3>Success!</H3>");
+            } else {
+                $('#result').html("<H3>The device did not accept intro - Reload this page to try again!</H3>");
+            }
+        }
+        function deviceIntro() {
+            id2.setTo(deviceFinger);
+            id2.setNonce(nonceS);
+            $('#result').html("<H3>Telling device about friend</H3>");
+            var channel = id2.createDataChannel("iphonetempfriend", {});
+            channel.onopen = function() {
+                var mess = {id: friendFinger, action: "introduce"};
+                console.log("sending " + JSON.stringify(mess));
+                channel.send(JSON.stringify(mess));
+            };
+            channel.onmessage = deviceIntroAck;
+        }
+
+        function showOnly(fing) {
+            Ipseorama.dbListPrint(function(friends) {
+                var pics = "<ul>";
+                friends.forEach(function(fr) {
+                    if (fr.finger === fing) {
+                        pics += "<li><img src='" + fr.tag + "'/>Introducing...</li>";
+                    }
+                });
+                pics += "</ul>";
+                $('#friendList').html(pics);
+            }
+            );
+        }
+        function setDevice(fing) {
+            deviceFinger = fing;
+            console.log("introing device " + deviceFinger + " to friend " + friendFinger);
+            showOnly(fing);
+            deviceIntro();
+        }
+        function showDevices(friends) {
+            id2 = new IpseDataChannel(myFinger,null,function(ipsed2) {
+                console.log("ID2 ok");
+                            });
+            id2.setOnDataChannel(function() {console.log("New DC?!?")});
+            var pics = "<h3>Devices</h3><ol>";
+            friends.forEach(function(fr) {
+                friendList[fr.finger] = fr;
+                if (friendFinger != fr.finger) {
+                    pics += "<li><img src='" + fr.tag + "' onclick=\"setDevice('" + fr.finger + "');\"></li>";
+                }
+            });
+            pics += "</ol>";
+            $('#friendList').html(pics);
+            $('#result').html("<H3>Choose a device</H3");
+        }
+
+
+
+
+        function startQrDecode() {
+            var video = document.getElementById('gumVideo');
+            var photo = document.getElementById('qr-canvas');
+            var context = photo.getContext('2d');
+            // set our canvas to the same size as our video
+
+            qrcode.callback = function(code) {
+                console.log("got qrcode of " + code);
+                clearInterval(tick);
+                navigator.vibrate(50);
+                var fparts = code.split(":");
+                friendFinger = fparts[0];
+                nonceS = fparts[1];
+                console.log("nonce = " + nonceS);
+                $("#qr-canvas").remove();
+                $("#gumVideo").css("display", "none");
+                $('#result').html("<H3>Scan ok - choose a device to lend...</H3>");
+                Ipseorama.dbListPrint(showDevices);
+            };
+            var tick = setInterval(function() {
+                if ((video.videoWidth > 0) && (video.videoHeight > 0)) {
+                    var rat = video.height / video.videoHeight;
+                    photo.width = video.videoWidth * rat;
+                    photo.height = video.videoHeight * rat;
+                    console.log("set photo to " + photo.width + " x " + photo.height);
+                    console.log("rat was " + rat);
+                    context.drawImage(video, 0, 0, photo.width, photo.height);
+                    qrcode.decode();
+                }
+            }, 250);
+        }
+        function startGum(sid) {
+            var constraints = {video: true, audio: false};
+            if (sid) {
+                constraints.video = {optional: [{sourceId: sid}]};
+            }
+            navigator.getUserMedia(constraints,
+                    function(stream) {
+                        var url = window.URL || window.webkitURL;
+                        var v = document.getElementById('gumVideo');
+                        v.src = url ? url.createObjectURL(stream) : stream;
+                        v.play();
+                        startQrDecode();
+                    },
+                    function(error) {
+                        alert('Something went wrong. (error code ' + error.code + ')');
+                        location.href = "nogum.htm";
+                        return;
+                    }
+            );
+        }
+        function onSourcesAcquired(sources) {
+            var sid;
+            for (var i = 0; i != sources.length; ++i) {
+                var source = sources[i];
+                console.log(source);
+                if ((source.kind == "videoinput") && (source.label.endsWith("back"))) {
+
+                    sid = source.deviceId;
+                }
+            }
+            startGum(sid);
+        }
+        function askforCam() {
+            console.log("starting QR reader");
+            //frontcam...
+            var sid;
+            if ((typeof navigator.mediaDevices === 'undefined') 
+              || (typeof navigator.mediaDevices.enumerateDevices == 'undefined')){
+                startGum(sid);
+            } else {
+                navigator.mediaDevices.enumerateDevices().then(onSourcesAcquired);
+
+            }
+        }
+        function gotFinger(finger) {
+            myFinger = finger;
+            $('#myFinger').html(finger);
+            askforCam();
+        }
+        $(document).ready(function() {
+            Ipseorama.whoAmI(gotFinger, function(err) {
+                console.log("could not create identity " + err)
+            });
+        });
+    </script>
+    <h1>Introduce a friend's browser to a device you own</h1>
+    <div> My Fingerprint is :
+        <span id="myFinger">unknown</span> </div>
+    <div id="remoteVideoContainer" class="ui-video-remote-container">
+        <canvas width="320" height="240" id="qr-canvas"></canvas>
+        <video style="display:none;" width="320" height="240" id="gumVideo" autoplay="autoplay"/>
+    </div>
+    <div id="friendList"/>
+    <div id="result"> Scan a friend's smartphone.</div>
+
+
+</body>
+</html>
