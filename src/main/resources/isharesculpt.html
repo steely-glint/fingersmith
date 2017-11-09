@@ -1,0 +1,255 @@
+<html><head>
+<title>Share my device with an iPhone</title></head>
+<meta name="viewport" content="width=device-width">
+<link href="https://pi.pe/pipe.css" media="all" rel="stylesheet" />
+
+<style type="text/css">
+    img{border:thick solid white;}
+</style>
+    <script src="js/jquery-1.8.3.js"></script>
+    <script src="js/phono.sdp.js"></script>
+<script type="text/javascript">
+    (function () {
+        function getFinger(descsdp) {
+            var sdp = Phono.sdp.parseSDP(descsdp)
+            var myfp = JSON.stringify(sdp.contents[0].fingerprint.print);
+            myfp = myfp.split(":").join("");
+            myfp = myfp.split('"').join("");
+            console.log("fingerprint is " + myfp)
+            return myfp;
+        };
+
+        PipeDb = {
+            addMyCertToPeerConf: function (peerconf, mkpc) {
+                mkpc();
+            },
+            dbAddPrint: function(print, doneCB) {
+                console.log("pretending to Add a new print ");
+                doneCB(print);
+            },
+            whoAmI: function (okCB, failCB) {
+                var peerconfig = {
+                    "iceServers": [
+                        {urls: "stun:146.148.121.175:3478"},
+                        {urls: "turn:146.148.121.175:3478?transport=udp", 'credential': 'nexus5x', 'username': 'smartphone'},
+                    ],
+                    "bundlePolicy":"max-bundle","iceCandidatePoolSize":1
+                };
+                var pc = new RTCPeerConnection(peerconfig, null);
+                pc.createDataChannel('echo', {});
+                pc.createOffer()
+                    .then(function (localDesc) {
+                        var myfp = getFinger(localDesc.sdp);
+                        okCB(myfp,pc);
+                    })
+                    .catch(function (error) {
+                        failCB(error);
+                    });
+            }
+        };
+    }());
+</script>
+    <script src="js/pipeDuct.js"></script>
+    <script src="js/qrcode.js"></script>
+ <script type="text/javascript">
+        var id = undefined;
+        var duct = null;
+        var pipe;
+
+        function update(pix) {
+            var values = [];
+            //console.log("pix ="+JSON.stringify(pix));
+            for (var i = 0; i < LEDCOUNT /3 ; i++) {
+                var offs = i*4;
+                var col = "0x"+pix[offs++].toString(16) + pix[offs++].toString(16) + pix[offs++].toString(16);
+                //console.log("pixelcolour "+col);
+
+                var pixc = parseInt(col);
+                // each tube is 3 leds
+                values.push(pixc);
+                values.push(pixc);
+                values.push(pixc);
+            }
+            var message = {
+                command: "paint",
+                pixels: values
+            };
+            //console.log("sending "+JSON.stringify(message));
+            pipe.send(JSON.stringify(message));
+        }
+        function matchColours()
+        {
+            var video = document.getElementById('gumVideo');
+            var photo = document.getElementById('qr-canvas');
+            var context = photo.getContext('2d');
+
+
+            var tick = setInterval(function () {
+                if ((video.videoWidth > 0) && (video.videoHeight > 0)) {
+                    var rat = video.height / video.videoHeight;
+                    photo.width = video.videoWidth * rat;
+                    photo.height = video.videoHeight * rat;
+                    photo.height = video.videoHeight * rat;
+                    context.drawImage(video, 0, 0, photo.width, photo.height);
+                    x = (photo.width /2) - 2;
+                    y = (photo.height /2) -2;
+                    var imgd = context.getImageData(x, y, 4, 4);
+                    var pix = imgd.data;
+                    context.beginPath();
+                    context.lineWidth="2";
+                    context.strokeStyle="red";
+                    context.rect(x-1,y-1,5,5);
+                    context.stroke();
+                    update(pix);
+                }
+            }, 200);
+        }
+        function startGum(sid) {
+            var constraints = {video: true, audio: false};
+            if (sid) {
+                constraints.video = {optional: [{sourceId: sid}]};
+            }
+            navigator.mediaDevices.getUserMedia(constraints).then(
+                function(stream) {
+                    var url = window.URL || window.webkitURL;
+                    var v = document.getElementById('gumVideo');
+                    v.src = url ? url.createObjectURL(stream) : stream;
+                    v.play();
+                    matchColours();
+                }).catch(
+                function(error) {
+                    alert('Something went wrong. (error code ' + error.code + ')');
+                    location.href = "nogum.htm";
+                    return;
+                });
+        }
+        function onSourcesAcquired(sources) {
+            var sid;
+            for (var i = 0; i != sources.length; ++i) {
+                var source = sources[i];
+                console.log(source);
+                if ((source.kind == "videoinput") && (source.label.endsWith("back"))) {
+                    sid = source.deviceId;
+                    //break;
+                }
+            }
+            startGum(sid);
+        }
+        function askforCam() {
+            console.log("starting QR reader");
+            //frontcam...
+            var sid;
+            if ((typeof navigator.mediaDevices === 'undefined') || (typeof navigator.mediaDevices.enumerateDevices == 'undefined')) {
+                startGum(sid);
+            } else {
+                navigator.mediaDevices.enumerateDevices().then(onSourcesAcquired);
+                //MediaStreamTrack.getSources(onSourcesAcquired);
+            }
+        }
+        function makedc(tofinger) {
+            duct.setTo(tofinger);
+            pipe = duct.createDataChannel("opc:127.0.0.1:7890", {});
+            fakeonn();
+            pipe.onopen = function () {
+                askforCam();
+                $('#friendList').hide();
+            };
+            pipe.onmessage = function (message) {
+            };
+            pipe.onclose = function () {
+            };
+        }
+        function onNewDc(channel) {
+            console.log("New DC ")
+            pipe.onmessage = onDcMessage;
+        }
+        function fakeonn(){
+            var pc = duct.peerCon;
+            var that = duct;
+            pc.createOffer(that.sdpConstraints).then(desc => {
+                pc.setLocalDescription(desc).then( _ => {
+                    console.log("Set Local description");
+                    that.sendSDP(pc);
+                });
+            }).catch (that.logError);
+        }
+
+        function createHexString(arr) {
+            var result = "";
+            var z;
+
+            for (var i = 0; i < arr.length; i++) {
+                var str = arr[i].toString(16);
+
+                z = 2 - str.length + 1;
+                str = Array(z).join("0") + str;
+
+                result += str;
+            }
+
+            return result.toUpperCase();
+        }
+
+        function mkNonce() {
+            var buf = new Uint8Array(16);
+            window.crypto.getRandomValues(buf);
+            var ret = createHexString(buf);
+            return ret;
+        }
+        function onextra(x){
+            console.log("got extra over ws "+JSON.stringify(x));
+            if ((x.action) && (x.id)){
+                if (x.action === "introduce"){
+                    $('#qr').hide();
+                    $('#result').html("<H3>Scan ok - introduced to friend's device...</H3>");
+                    makedc(x.id);
+                }
+            }
+        }
+        function gotId(liid,wcpc) {
+            id = liid;
+            duct = new PipeDuct(id);
+            duct.connect = function() {
+                var that = this;
+
+                var promise = new Promise(function(resolve, reject) {
+                    that.withPc(wcpc, resolve);
+                    // insert extra message handler here.
+                });
+                return promise;
+            };
+            duct.setOnextra(onextra);
+            duct.setOnDataChannel(onNewDc);
+            var myid = id + ":" + mkNonce();
+            console.log("mk qr of " + myid);
+            var qrcode = new QRCode(document.getElementById("qr"), {
+                width: 480,
+                height: 480,
+                correctLevel: QRCode.CorrectLevel.M
+            });
+            duct.connect().then(function (d) {
+                console.log("connected as " + id);
+                qrcode.makeCode(myid);
+            });
+        }
+
+        $(document).ready(function() {
+            PipeDb.whoAmI(gotId, function(err) {
+                console.log("could not create identity " + err)
+            });
+        });
+    </script>
+    <h1>Share this device by scanning it with another.</h1>
+    <div id="qr" class="qr">
+
+    </div>
+    <div id="result"> Get this scanned by a friend's iPhone (ios 11) to borrow their webcamera.</div>
+<div id="camera" class="ui-video-remote-container">
+    <canvas width="320" height="240" id="qr-canvas"></canvas>
+    <video style="display:none;" width="320" height="240" id="gumVideo" autoplay="autoplay"/>
+</div>
+
+
+
+</body>
+</html>
