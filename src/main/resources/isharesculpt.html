@@ -55,6 +55,7 @@
         var id = undefined;
         var duct = null;
         var pipe;
+        var LEDCOUNT = 45;
 
         function update(pix) {
             var values = [];
@@ -105,21 +106,18 @@
             }, 200);
         }
         function startGum(sid) {
-            var constraints = {video: true, audio: false};
-            if (sid) {
-                constraints.video = {optional: [{sourceId: sid}]};
-            }
+            var constraints ={video: sid ?  {deviceId: {exact: sid}}:{ facingMode:  "environment" }};
+                //constraints.video = {optional: [{sourceId: sid}]};
+
             navigator.mediaDevices.getUserMedia(constraints).then(
                 function(stream) {
-                    var url = window.URL || window.webkitURL;
                     var v = document.getElementById('gumVideo');
-                    v.src = url ? url.createObjectURL(stream) : stream;
+                    v.srcObject = stream;
                     v.play();
                     matchColours();
                 }).catch(
                 function(error) {
-                    alert('Something went wrong. (error code ' + error.code + ')');
-                    location.href = "nogum.htm";
+                    alert("Couldn't get camera. (error code " + error.code + ")");
                     return;
                 });
         }
