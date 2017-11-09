@@ -1,31 +1,62 @@
 <html><head><title>pipe demo</title>
-<link href="/pipe.css" media="all" rel="stylesheet" />
+<link href="https://pi.pe/pipe.css" media="all" rel="stylesheet" />
+    <style>
+    .button {
+    background-color: #FFFFFF;
+    color: #000000;
+    padding: 10px;
+    border-radius: 10px;
+    -moz-border-radius: 10px;
+    -webkit-border-radius: 10px;
+    margin:10px
+    }
+
+    .small-btn {
+    width: 50px;
+    height: 25px;
+    }
+
+    .medium-btn {
+    width: 70px;
+    height: 30px;
+    }
+
+    .big-btn {
+    width: 90px;
+    height: 40px;
+        font-size: large;
+    }
+    .allbody {
+        font-size: large;
+    }
+    </style>
 </head>
+<body class="allbody">
 <div class="wrap">
     <H1>pipe demo page</H1>
-    <p>Demos for the pipe IoT pairing system.</p>
+    <H2>Demos for the pipe IoT pairing system.</H2>
 <div>
     <ul>
-        <p>Manage devices:<p>
-        <li><a href="claim.html">Claim a new device</a></li>
-        <li><a href="shake.html">Lend a device to a friend</a></li>
-        <li><a href="share.html">Borrow a device from a friend</a></li>
-        <li><a href="delete.html">Delete a device from your list</a></li>
-        <li><a href="resusitate.html">Resusitate a confused device</a></li>
+        <H2>Manage devices:</H2>
+        <li><a href="claim.html"><button type="button" class=" button big-btn">Claim</button> a new device</a></li>
+        <li><a href="shake.html"><button type="button" class=" button big-btn">Lend</button> a device to a friend</a></li>
+        <li><a href="share.html"><button type="button" class=" button big-btn">Borrow</button> a device from a friend</a></li>
+        <li><a href="delete.html"><button type="button" class=" button big-btn">Delete</button> a device from your list</a></li>
+        <li><a href="resusitate.html"><button type="button" class=" button big-btn">Revive</button> a confused device</a></li>
     </ul>
 </div>
 <div>
     <ul>
-        <p>Access devices:<p>
-        <li><a href="solar.html">Check the voltage on a solar battery</a></li>
-        <li><a href="solarg2.html">Show history of voltage on solar</a></li>
-        <li><a href="morse.html">Send morse to the sculpture</a></li>
-        <li><a href="match.html">Colour the sculpture</a></li>
-        <li><a href="babystar.html">Control the prototype Starway sculpture</a></li>
-        <li><a href="fakerfid.html">Send fakeRFIds to the prototype Starway sculpture</a></li>
-        <li><a href="tbone.html">Monitor the CPU temp of a device</a></li>
-        <li><a href="cimage.html">Web Camera</a></li>
-        <li><a href="sumo2.html">Drive the drone</a></li>
+        <H2>Access devices:</H2>
+        <!--<li><a href="solar.html">Check the voltage on a solar battery</a></li>
+        <li><a href="solarg2.html">Show history of voltage on solar</a></li>-->
+        <li><a href="morse.html"><button type="button" class=" button big-btn">Send</button> morse to the sculpture</a></li>
+        <li><a href="match.html"><button type="button" class=" button big-btn">Colour</button> the sculpture</a></li>
+        <!--<li><a href="babystar.html">Control the prototype Starway sculpture</a></li>
+        <li><a href="fakerfid.html">Send fakeRFIds to the prototype Starway sculpture</a></li>-->
+        <li><a href="tbone.html"><button type="button" class=" button big-btn">Monitor</button> the CPU temp of a device</a></li>
+        <li><a href="cimage.html"><button type="button" class=" button big-btn">View</button>Web Camera</a></li>
+        <li><a href="sumo2.html"><button type="button" class=" button big-btn">Drive</button> the drone</a></li>
 
             <!--
             babystar.html
@@ -45,10 +76,10 @@
 </div>
     <div>
         <ul>
-            <p>Iphone PoC pages<p>
-            <li><a href="ishake.html">Lend a device to an iphone</a></li>
-            <li><a href="isharecam.html">Borrow webcam on an iphone</a></li>
-            <li><a href="isharesculpt.html">Control sculpture from an iphone</a></li>
+            <H2>iPhone PoC actions:</H2>
+            <li><a href="ishake.html"><button type="button" class=" button big-btn">Lend</button> a device to an iphone</a></li>
+            <li><a href="isharecam.html"><button type="button" class=" button big-btn">Borrow</button> webcam on an iphone</a></li>
+            <li><a href="isharesculpt.html"><button type="button" class=" button big-btn">Control</button> sculpture from an iphone</a></li>
         </ul>
     </div>
 </div>
