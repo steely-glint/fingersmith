@@ -1,0 +1,302 @@
+<html><head>
+<title>Share my device with an iPhone</title></head>
+<meta name="viewport" content="width=device-width">
+<link href="https://pi.pe/pipe.css" media="all" rel="stylesheet" />
+
+<style type="text/css">
+    img{border:thick solid white;}
+</style>
+    <script src="js/jquery-1.8.3.js"></script>
+    <script src="js/phono.sdp.js"></script>
+<script type="text/javascript">
+    (function () {
+        function getFinger(descsdp) {
+            var sdp = Phono.sdp.parseSDP(descsdp)
+            var myfp = JSON.stringify(sdp.contents[0].fingerprint.print);
+            myfp = myfp.split(":").join("");
+            myfp = myfp.split('"').join("");
+            console.log("fingerprint is " + myfp)
+            return myfp;
+        };
+
+        PipeDb = {
+            addMyCertToPeerConf: function (peerconf, mkpc) {
+                mkpc();
+            },
+            dbAddPrint: function(print, doneCB) {
+                console.log("pretending to Add a new print ");
+                doneCB(print);
+            },
+            whoAmI: function (okCB, failCB) {
+                var peerconfig = {
+                    "iceServers": [
+                        {urls: "stun:146.148.121.175:3478"},
+                        {urls: "turn:146.148.121.175:3478?transport=udp", 'credential': 'nexus5x', 'username': 'smartphone'},
+                    ],
+                    "bundlePolicy":"max-bundle","iceCandidatePoolSize":1
+                };
+                var pc = new RTCPeerConnection(peerconfig, null);
+                pc.createDataChannel('echo', {});
+                pc.createOffer()
+                    .then(function (localDesc) {
+                        var myfp = getFinger(localDesc.sdp);
+                        okCB(myfp,pc);
+                    })
+                    .catch(function (error) {
+                        failCB(error);
+                    });
+            }
+        };
+    }());
+</script>
+    <script src="js/pipeDuct.js"></script>
+    <script src="js/qrcode.js"></script>
+ <script type="text/javascript">
+        var id = undefined;
+        var duct = null;
+        var pipe;
+        var LEDCOUNT = 45;
+        var allwhite = [];
+        var allblack = [];
+        var dit = 250;
+        var da = dit * 3;
+        var gain;
+        var alphabet = {
+            'a': '.-',
+            'b': '-...',
+            'c': '-.-.',
+            'd': '-..',
+            'e': '.',
+            'f': '..-.',
+            'g': '--.',
+            'h': '....',
+            'i': '..',
+            'j': '.---',
+            'k': '-.-',
+            'l': '.-..',
+            'm': '--',
+            'n': '-.',
+            'o': '---',
+            'p': '.--.',
+            'q': '--.-',
+            'r': '.-.',
+            's': '...',
+            't': '-',
+            'u': '..-',
+            'v': '...-',
+            'w': '.--',
+            'x': '-..-',
+            'y': '-.--',
+            'z': '--..',
+            ' ': '/',
+            '1': '.----',
+            '2': '..---',
+            '3': '...--',
+            '4': '....-',
+            '5': '.....',
+            '6': '-....',
+            '7': '--...',
+            '8': '---..',
+            '9': '----.',
+            '0': '-----',
+        };
+
+        function fillall(pno) {
+            allwhite = [];
+            allblack = [];
+            var white = parseInt("0xffffff");
+            var black = parseInt("0x0");
+            for (var i = 0; i < LEDCOUNT; i++) {
+                allblack.push(black);
+                if ((!pno) || (pno === Math.floor(i / 3))) {
+                    allwhite.push(white);
+                } else {
+                    allwhite.push(black);
+                }
+            }
+        }
+
+        function update(values,when) {
+            var message = {
+                command: "paint",
+                pixels: values
+            };
+            if (when){
+                message.at = ""+(dit+when);
+            }
+            channel.send(JSON.stringify(message));
+            console.log(JSON.stringify(message));
+        }
+
+        function soundOff() {
+            if(gain) {
+                gain.gain.value =0.0
+            }
+        }
+
+        function soundOn() {
+            if(gain) {
+                gain.gain.value =1.0
+            }
+        }
+
+        function sendMessage(codeS) {
+            soundOff();
+            update(allblack);
+            var next = 0;
+            var code = codeS.split('');
+            var now = Date.now();
+            code.forEach(function(c) {
+                switch (c) {
+                    case '.':
+                        setTimeout(soundOn, next);
+                        update(allwhite,now+next);
+                        next += dit;
+                        setTimeout(soundOff, next);
+                        update(allblack,now+next);
+                        next += dit;
+                        break;
+                    case '-':
+                        setTimeout(soundOn, next);
+                        update(allwhite,now+next);
+                        next += da;
+                        setTimeout(soundOff, next);
+                        update(allblack,now+next);
+                        next += dit;
+                        break;
+                    case ' ':
+                        next += da;
+                        break;
+                    case '/':
+                        next += da + da + dit;
+                        break;
+                }
+            });
+        }
+
+        function sendMorse(m) {
+            var morse = m.split('').map(function(e) {
+                return alphabet[e.toLowerCase()] || '';
+            }).join(' ');
+            sendMessage(morse);
+            console.log(morse);
+        }
+
+        function sendPipe() {
+            sendMorse(" pipe pipe pipe ");
+        }
+
+        function onNewDc(channel) {
+            console.log("New DC ")
+            pipe.onmessage = onDcMessage;
+        }
+        function fakeonn(){
+            var pc = duct.peerCon;
+            var that = duct;
+            pc.createOffer(that.sdpConstraints).then(desc => {
+                pc.setLocalDescription(desc).then( _ => {
+                    console.log("Set Local description");
+                    that.sendSDP(pc);
+                });
+            }).catch (that.logError);
+        }
+        function makedc(tofinger) {
+            duct.setTo(tofinger);
+            channel = duct.createDataChannel("opc:127.0.0.1:7890", {});
+            fakeonn();
+            channel.onopen = function() {
+                $('#pressme').show();
+                $('#pressme').click(sendPipe);
+                $('#friendList').hide();
+            };
+            channel.onmessage = function(message) {};
+            channel.onclose = function() {};
+        }
+        function createHexString(arr) {
+            var result = "";
+            var z;
+
+            for (var i = 0; i < arr.length; i++) {
+                var str = arr[i].toString(16);
+
+                z = 2 - str.length + 1;
+                str = Array(z).join("0") + str;
+
+                result += str;
+            }
+
+            return result.toUpperCase();
+        }
+
+        function mkNonce() {
+            var buf = new Uint8Array(16);
+            window.crypto.getRandomValues(buf);
+            var ret = createHexString(buf);
+            return ret;
+        }
+        function onextra(x){
+            console.log("got extra over ws "+JSON.stringify(x));
+            if ((x.action) && (x.id)){
+                if (x.action === "introduce"){
+                    $('#qr').hide();
+                    $('#result').html("<H3>Scan ok - introduced to friend's device...</H3>");
+                    makedc(x.id);
+                }
+            }
+        }
+        function gotId(liid,wcpc) {
+            id = liid;
+            duct = new PipeDuct(id);
+            duct.connect = function() {
+                var that = this;
+
+                var promise = new Promise(function(resolve, reject) {
+                    that.withPc(wcpc, resolve);
+                });
+                return promise;
+            };
+            duct.setOnextra(onextra);
+            duct.setOnDataChannel(onNewDc);
+            var myid = id + ":" + mkNonce();
+            console.log("mk qr of " + myid);
+            var qrcode = new QRCode(document.getElementById("qr"), {
+                width: 480,
+                height: 480,
+                correctLevel: QRCode.CorrectLevel.M
+            });
+            duct.connect().then(function (d) {
+                console.log("connected as " + id);
+                qrcode.makeCode(myid);
+            });
+        }
+        function bleeper() {
+            var AudioContext = window.AudioContext || window.webkitAudioContext;
+            var context = new AudioContext()
+            var oscillator = context.createOscillator();
+            gain = context.createGain();
+            oscillator.frequency.value = 750;
+            oscillator.connect(gain);
+            gain.connect(context.destination);
+            gain.gain.value = 0.0;
+            oscillator.start(0);
+        }
+        $(document).ready(function() {
+            PipeDb.whoAmI(gotId, function(err) {
+                console.log("could not create identity " + err)
+            });
+            $('#pressme').hide();
+            fillall();
+            bleeper();
+        });
+    </script>
+    <h1>Share this device by scanning it with another.</h1>
+    <div id="qr" class="qr">
+
+    </div>
+    <div id="result"> Get this scanned by a the owner's phone to send morse to the sculpture.</div>
+<input style="font-size: xx-large;" id="pressme" type="button" value="Send" />
+
+
+
+</body>
+</html>
