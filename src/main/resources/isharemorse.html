@@ -31,7 +31,7 @@
                 var peerconfig = {
                     "iceServers": [
                         {urls: "stun:146.148.121.175:3478"},
-                        {urls: "turn:146.148.121.175:3478?transport=udp", 'credential': 'nexus5x', 'username': 'smartphone'},
+                        {urls: "turn:146.148.121.175:3478?transport=udp", 'credential': 'charliebrown', 'username': 'owner'},
                     ],
                     "bundlePolicy":"max-bundle","iceCandidatePoolSize":1
                 };
@@ -260,8 +260,8 @@
             var myid = id + ":" + mkNonce();
             console.log("mk qr of " + myid);
             var qrcode = new QRCode(document.getElementById("qr"), {
-                width: 480,
-                height: 480,
+                width: 400,
+                height: 400,
                 correctLevel: QRCode.CorrectLevel.M
             });
             duct.connect().then(function (d) {
