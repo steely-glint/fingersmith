@@ -150,7 +150,7 @@
 
             function makeVideo(){
 
-                var vc = duct.createDataChannel("gstH264",{});
+                var vc = duct.createDataChannel("videorelay",{});
                 vc.onopen = function(){
                     $('#friendList').hide();
                     console.log("videorelay channel ");
