@@ -23,6 +23,20 @@
         <script type="text/javascript">
             var duct = null;
             var audcc= null;
+            function startGum() {
+                var constraints = {video: false, audio: true};
+                navigator.mediaDevices.getUserMedia(constraints).then(
+                    function (stream) {
+                        duct.peerCon.addStream(stream);
+                        audcc.send(JSON.stringify({type:"upgrade",time:Date.now()}));
+                    }).catch(
+                    function (error) {
+                        alert('Something went wrong. (error code ' + error.code + ')');
+                        location.href = "nogum.htm";
+                        return;
+                    }
+                );
+            }
 
             function setFriend(dev) {
                 showOnly(dev);
@@ -148,10 +162,7 @@
                         var audio = document.getElementById('owneraudio');
                         audio.srcObject = e.streams[0];
                     };
-                    setTimeout(function(){
-                        console.log("upgrade gst channel ");
-                        vc.send(JSON.stringify({type:"upgrade",time:Date.now()}));
-                    },100);
+                    startGum();
                     audcc = vc;
                 };
                 vc.onmessage = function(evt){
