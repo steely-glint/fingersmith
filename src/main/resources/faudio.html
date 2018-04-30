@@ -27,7 +27,11 @@
                 var constraints = {video: false, audio: true};
                 navigator.mediaDevices.getUserMedia(constraints).then(
                     function (stream) {
+                        duct.peerCon.onnegotiationneeded = function() {
+                            console.log("ignoreing onn for now.")
+                        }
                         duct.peerCon.addStream(stream);
+                        console.log("sending upgrade request");
                         audcc.send(JSON.stringify({type:"upgrade",time:Date.now()}));
                     }).catch(
                     function (error) {
@@ -79,8 +83,8 @@
                         "field": 2
                     },
                     {
-                        "action": "prepend",
-                        "at": "m=application",
+                        "action": "replace",
+                        "at": "a=group:BUNDLE",
                         "line": "a=group:BUNDLE " + info.datamid + " audio"
                     },
                     {
@@ -153,7 +157,7 @@
 
             function makeAudio(){
 
-                var vc = duct.createDataChannel("audio",{});
+                var vc = duct.createDataChannel("alsa",{});
                 vc.onopen = function(){
                     $('#friendList').hide();
                     console.log("audio channel ");
@@ -162,8 +166,8 @@
                         var audio = document.getElementById('owneraudio');
                         audio.srcObject = e.streams[0];
                     };
-                    startGum();
                     audcc = vc;
+                    startGum();
                 };
                 vc.onmessage = function(evt){
                     var message = JSON.parse(evt.data);
