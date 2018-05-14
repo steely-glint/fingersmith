@@ -260,9 +260,9 @@
             var myid = id + ":" + mkNonce();
             console.log("mk qr of " + myid);
             var qrcode = new QRCode(document.getElementById("qr"), {
-                width: 400,
-                height: 400,
-                correctLevel: QRCode.CorrectLevel.M
+                width: 280,
+                height: 280,
+                correctLevel: QRCode.CorrectLevel.L
             });
             duct.connect().then(function (d) {
                 console.log("connected as " + id);

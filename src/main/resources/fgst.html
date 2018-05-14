@@ -1,16 +1,5 @@
 <html><head><title>Term</title>
 <style>
-.term {
-    font-family: courier,fixed,swiss,monospace,sans-serif;
-    font-size: 12px;
-    color: #f0f0f0;
-    background: #000000;
-}
-
-.termReverse {
-    color: #000000;
-    background: #00ff00;
-}
 #note {
     font-size: 12px;
 }
@@ -19,7 +8,6 @@
         <script src="js/phono.sdp.js"></script>
         <script src="js/pipeDb.js"></script>
         <script src="js/pipeDuct.js"></script>
-        <script src="js/term.js"></script>
         <script type="text/javascript">
             var duct = null;
             var vidcc= null;
@@ -65,8 +53,8 @@
                         "field": 2
                     },
                     {
-                        "action": "prepend",
-                        "at": "m=application",
+                        "action": "replace",
+                        "at": "a=group:BUNDLE",
                         "line": "a=group:BUNDLE " + info.datamid + " video"
                     },
                     {

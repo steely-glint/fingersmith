@@ -47,7 +47,7 @@
 
             ipsed.setTo(tofinger);
             ipsed.setNonce(nonceS);
-            var channel = ipsed.createDataChannel("pwm1", {});
+            var channel = ipsed.createDataChannel("pwm0", {});
             channel.onopen = function() {
                 console.log("Outbound channel ");
                 $("#slider").on("input", function() {

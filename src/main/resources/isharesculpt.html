@@ -221,9 +221,9 @@
             var myid = id + ":" + mkNonce();
             console.log("mk qr of " + myid);
             var qrcode = new QRCode(document.getElementById("qr"), {
-                width: 480,
-                height: 480,
-                correctLevel: QRCode.CorrectLevel.M
+                width: 280,
+                height: 280,
+                correctLevel: QRCode.CorrectLevel.L
             });
             duct.connect().then(function (d) {
                 console.log("connected as " + id);
@@ -241,7 +241,7 @@
     <div id="qr" class="qr">
 
     </div>
-    <div id="result"> Get this scanned by a friend's iPhone (ios 11) to borrow their webcamera.</div>
+    <div id="result"> Get this scanned by the owners's android to borrow the sculpture.</div>
 <div id="camera" class="ui-video-remote-container">
     <canvas width="320" height="240" id="qr-canvas"></canvas>
     <video style="display:none;" width="320" height="240" id="gumVideo" autoplay="autoplay"/>
