@@ -200,9 +200,11 @@ IpseDataChannel.prototype.createDataChannel = function (name, props) {
 }
 IpseDataChannel.prototype.setTo = function (tof) {
     this.toFinger = tof;
-    var d = new Date();
-    var n = d.getTime();
-    this.session = this.myFinger + "-" + tof + "-" + n; // fix this
+    if (this.session == null){
+        var d = new Date();
+        var n = d.getTime();
+        this.session = this.myFinger + "-" + tof + "-" + n;
+    }
     console.log("this.toFinger:" + this.toFinger);
 };
 IpseDataChannel.prototype.addRemote = function (tag,done) {
