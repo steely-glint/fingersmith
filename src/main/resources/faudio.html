@@ -1,0 +1,220 @@
+<html><head><title>Term</title>
+<style>
+.term {
+    font-family: courier,fixed,swiss,monospace,sans-serif;
+    font-size: 12px;
+    color: #f0f0f0;
+    background: #000000;
+}
+
+.termReverse {
+    color: #000000;
+    background: #00ff00;
+}
+#note {
+    font-size: 12px;
+}
+</style>
+        <script src="js/jquery-1.8.3.js"></script>
+        <script src="js/phono.sdp.js"></script>
+        <script src="js/pipeDb.js"></script>
+        <script src="js/pipeDuct.js"></script>
+        <script src="js/term.js"></script>
+        <script type="text/javascript">
+            var duct = null;
+            var audcc= null;
+            function startGum() {
+                var constraints = {video: false, audio: true};
+                navigator.mediaDevices.getUserMedia(constraints).then(
+                    function (stream) {
+                        duct.peerCon.onnegotiationneeded = function() {
+                            console.log("ignoreing onn for now.")
+                        }
+                        duct.peerCon.addStream(stream);
+                        console.log("sending upgrade request");
+                        audcc.send(JSON.stringify({type:"upgrade",time:Date.now()}));
+                    }).catch(
+                    function (error) {
+                        alert('Something went wrong. (error code ' + error.code + ')');
+                        location.href = "nogum.htm";
+                        return;
+                    }
+                );
+            }
+
+            function setFriend(dev) {
+                showOnly(dev);
+                makedc(dev);
+            }
+            function showOnly(fing) {
+                PipeDb.dbListPrint(function(friends) {
+                        var pics = "<ul>";
+                        friends.forEach(function(fr) {
+                            if (fr.finger === fing) {
+                                pics += "<li><img src='" + fr.tag + "'/>Connecting...</li>";
+                            }
+                        });
+                        pics += "</ul>";
+                        $('#friendList').html(pics);
+                    }
+                );
+            }
+            function showFriends(friends) {
+                var pics = "<ol>";
+                friends.forEach(function(fr) {
+                    pics += "<li><img src='" + fr.tag + "' onclick=\"setFriend('" + fr.finger + "');\"/></li>";
+                });
+                pics += "</ol>";
+                $('#friendList').html(pics);
+            }
+            function gotId(id) {
+                duct = new PipeDuct(id);
+                PipeDb.dbListPrint(showFriends);
+                $('#remote').hide();
+            }
+            function addaudiopatch(mess) {
+                var info = mess.info;
+                console.log("message is " + JSON.stringify(mess))
+                mess.patches = [
+                    // add an audio mid
+                    {
+                        "action": "increment",
+                        "at": "o=-",
+                        "field": 2
+                    },
+                    {
+                        "action": "replace",
+                        "at": "a=group:BUNDLE",
+                        "line": "a=group:BUNDLE " + info.datamid + " audio"
+                    },
+                    {
+                        "action": "append",
+                        "at": "end",
+                        "lines": [
+                            "m=audio 9 UDP/TLS/RTP/SAVP "+info.vtype,
+                            "c=IN IP4 0.0.0.0",
+                            "a=rtcp:9 IN IP4 0.0.0.0",
+                            "a=mid:audio",
+                            "a=sendrcv",
+                            "a=rtcp-mux",
+                            "a=rtpmap:" + info.vtype + " " + info.codec,
+                            "a=ssrc:" + info.csrc + " cname:doorbell",
+                            "a=ssrc:" + info.csrc + " mslabel:" + info.msid,
+                            "a=ssrc:" + info.csrc + " label:" + info.appdata,
+                            "a=ssrc:" + info.csrc + " msid:" + info.msid + " " + info.appdata,
+                        ]
+                    },
+                    {
+                        "action": "duplicate",
+                        "at": "mid:audio",
+                        "line": "a=fingerprint:"
+                    },
+                    {
+                        "action": "duplicate",
+                        "at": "mid:audio",
+                        "line": "a=ice-ufrag:"
+                    },
+                    {
+                        "action": "duplicate",
+                        "at": "mid:audio",
+                        "line": "a=ice-pwd:"
+                    },
+                    {
+                        "action": "duplicate",
+                        "at": "mid:audio",
+                        "line": "a=setup:"
+                    }
+                ];
+
+            }
+
+            function sendLd() {
+                var desc = duct.peerCon.localDescription;
+                var mess = {type: desc.type, sdp: desc.sdp, tick: Date.now()};
+                console.log("sending " + JSON.stringify(mess));
+                console.log("to " + audcc.label);
+                audcc.send(JSON.stringify(mess));
+            }
+
+            function srd() {
+                var pc = duct.peerCon;
+                console.log("set Remote description  ok");
+                pc.createAnswer(function (desc) {
+                    pc.setLocalDescription(desc, function () {
+                        console.log("Set Local description");
+                        setTimeout(sendLd, 100);
+                    }, function (e) {
+                        console.log("Set Local description error " + e);
+                    });
+                }, function (e) {
+                    console.log("Create answer error " + e);
+                });
+            }
+
+            function srdfail(e) {
+                console.log("Set Remote description error " + e);
+            }
+
+            function makeAudio(){
+
+                var vc = duct.createDataChannel("alsa",{});
+                vc.onopen = function(){
+                    $('#friendList').hide();
+                    console.log("audio channel ");
+                    duct.peerCon.ontrack= function(e){
+                        console.log("got new stream");
+                        var audio = document.getElementById('owneraudio');
+                        audio.srcObject = e.streams[0];
+                    };
+                    audcc = vc;
+                    startGum();
+                };
+                vc.onmessage = function(evt){
+                    var message = JSON.parse(evt.data);
+                    console.log("->" + JSON.stringify(message));
+                    if ((message.type == "offer" )
+                        || (message.type == "answer")) {
+                        if (message.info) {
+                            addaudiopatch(message);
+                        }
+                        var patched = Phono.sdp.patch(duct.peerCon.remoteDescription.sdp, message);
+                        console.log("-+>" + JSON.stringify(patched));
+                        var rtcd = new RTCSessionDescription(patched);
+                        duct.peerCon.setRemoteDescription(rtcd, srd, srdfail);
+                    }
+                };
+                vc.onclose = function(){
+                }
+            }
+
+
+            function makedc(deviceId) {
+                console.log("setting deviceId" + deviceId);
+                duct.setTo(deviceId);
+                duct.connect().then(function (d) {
+                    setTimeout(function(){
+                        makeAudio();
+                    },100);
+                } );
+            }
+
+
+            $(document).ready(function() {
+                PipeDb.whoAmI(gotId, function(err) {
+                    console.log("could not create identity " + err);
+                });
+            });
+        </script>
+    </head>
+    <body>
+        <h1>Opus Alsa Audio </h1>
+        <div id="friendList">
+
+        </div>
+
+        <audio id="owneraudio" autoplay="autoplay" />
+
+
+
+    </body>
+</html>
