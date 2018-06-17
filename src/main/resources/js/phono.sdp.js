@@ -458,53 +458,59 @@
            return sdpObj;
        },
 	// apply patch actions to the sdp  
-       patch: function(sdpString,acts){
+        patch: function(sdpString,acts){
             if (!acts.patches) return acts;
             var sdpLines = sdpString.split("\r\n");
             for (var patchNo in acts.patches){
-                patch = acts.patches[patchNo];
-                console.log("act = "+patch.action);
-                if (patch.action == "append"){
-                   sdpLines = sdpLines.concat(patch.lines);
+                var lpatch = acts.patches[patchNo];
+                console.log("act = "+lpatch.action);
+                if (lpatch.action == "append"){
+                    sdpLines = sdpLines.concat(lpatch.lines);
                 } else {
-                    var where = sdpLines.length;
-                    for (var sdpLine in sdpLines) {
-                       var sline = sdpLines[sdpLine];
-                       if (sline.startsWith(patch.at)){
-                          where = sdpLine;
-                          break;
-                       }
-                    }
-                    console.log("found "+patch.at+" at "+where);
-                    if (patch.action == "prepend"){
-                        if (patch.line) {
-                            sdpLines.splice(where, 0, patch.line);
+                    var where = sdpLines.length-1;
+
+                    for (var lno=0;lno< sdpLines.length; lno++) {
+                        var sline = sdpLines[lno];
+                        if (sline.startsWith) {
+                            if (sline.startsWith(lpatch.at)) {
+                                where = lno;
+                                break;
+                            }
+                        } else {
+                            console.log("looking where - sline.startsWith not there ");
+                            console.log("lpatch = "+JSON.stringify(lpatch));
                         }
-                        if (patch.lines) {
-                            var plines = patch.lines.reverse();
+                    }
+                    console.log("found "+lpatch.at+" at "+where);
+                    if (lpatch.action == "prepend"){
+                        if (lpatch.line) {
+                            sdpLines.splice(where, 0, lpatch.line);
+                        }
+                        if (lpatch.lines) {
+                            var plines = lpatch.lines.reverse();
                             for (var pline in plines) {
                                 sdpLines.splice(where, 0, plines[pline]);
                             }
                         }
                     }
-                    if (patch.action == "increment"){
-                       var bits = sdpLines[where].split(" ");
-                       var v = parseInt(bits[patch.field]);
-                       console.log("old v is "+v);
-                       v = v+1;
-                       bits[patch.field] = ""+v;
-                       var line = bits.join(" ");
-                       console.log("new line is "+line);
-                       sdpLines[where] = line;
+                    if (lpatch.action == "increment"){
+                        var bits = sdpLines[where].split(" ");
+                        var v = parseInt(bits[lpatch.field]);
+                        console.log("old v is "+v);
+                        v = v+1;
+                        bits[lpatch.field] = ""+v;
+                        var line = bits.join(" ");
+                        console.log("new line is "+line);
+                        sdpLines[where] = line;
                     }
-                    if (patch.action == "replace"){
-                       sdpLines[where] = patch.line;
+                    if (lpatch.action == "replace"){
+                        sdpLines[where] = lpatch.line;
                     }
-                    if (patch.action == "duplicate"){
+                    if (lpatch.action == "duplicate"){
                         var withline;
                         for (var sdpLine in sdpLines) {
                             var sline = sdpLines[sdpLine];
-                            if (sline.startsWith(patch.line)){
+                            if (sline.startsWith(lpatch.line)){
                                 withline = sline;
                                 break;
                             }
@@ -513,12 +519,12 @@
                     }
 
                 }
-	    }
+            }
             var stripped = sdpLines.filter(function(l){ return l.length >0});
             var sdp = stripped.join("\r\n")+"\r\n";
             var ret = { type: acts.type, sdp: sdp};
             return ret;
-       },
+        },
         // sdp: an SDP text string representing an offer or answer, missing candidates
         // Return an object representing the SDP in Jingle like constructs
         parseSDP: function(sdpString) {

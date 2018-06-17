@@ -1,4 +1,4 @@
-<html><head><title>Term</title>
+<html><head><title>QRhunt</title>
 <style>
 
 
@@ -7,14 +7,80 @@
 }
 </style>
         <script src="js/jquery-1.8.3.js"></script>
+        <script src="js/LazarQr.min.js"></script>
         <script src="js/phono.sdp.js"></script>
         <script src="js/pipeDb.js"></script>
         <script src="js/pipeDuct.js"></script>
-        <script src="js/term.js"></script>
         <script type="text/javascript">
             var duct = null;
             var vidcc= null;
             var controlChannel = null;
+            var SEGLEN = 12;
+            var SEGS = 8;
+
+            function drawSegments(){
+                var text = "<ol>";
+                var winningCode = "";
+                for (var i=0;i<SEGS;i++){
+                    text += "<li>";
+                    var se = localStorage.getItem("QRsegment"+i);
+                    if (se) {
+                        text += se;
+                        if (i ==(SEGS-1) ){
+                            winningCode += ":";
+                        }
+                        winningCode +=se;
+                    }
+                    text += "</li>";
+                }
+                text +="</ol>";
+                if (winningCode.length == ((SEGLEN*SEGS)+1)){
+                    text += '<a href="win.html#'+winningCode+'"> Click to win </a>'
+                }
+                document.getElementById('qlist').innerHTML = text;
+            }
+
+            function setSeg(n,s){
+                localStorage.setItem("QRsegment"+n,s);
+                drawSegments();
+            }
+
+            function addCode(c){
+                var bits = c.split(":");
+                if ((bits.length == 2) && (bits[0].length == 1) && (bits[1].length == SEGLEN )){
+                    var n = Number(bits[0]) ;
+                    if (n<SEGS){
+                        setSeg(n,bits[1]);
+                    }
+                } else {
+                    console.log("bad format for QR");
+                }
+            }
+
+            function startQrDecode() {
+                var video = document.getElementById('ownervideo');
+                var photo = document.getElementById('qr-canvas');
+                var context = photo.getContext('2d');
+                // set our canvas to the same size as our video
+
+                qrcode.callback = function(code) {
+                    console.log("got qrcode of " + code);
+                    document.getElementById('qtext').innerText = code;
+                    addCode(code);
+                };
+                var tick = setInterval(function() {
+                    if ((video.videoWidth > 0) && (video.videoHeight > 0)) {
+                        var rat = video.height / video.videoHeight;
+                        photo.width = video.videoWidth * rat;
+                        photo.height = video.videoHeight * rat;
+                        console.log("set photo to " + photo.width + " x " + photo.height);
+                        console.log("rat was " + rat);
+                        context.drawImage(video, 0, 0, photo.width, photo.height);
+                        document.getElementById('qtext').innerText = "";
+                        qrcode.decode();
+                    }
+                }, 500);
+            }
 
             function setFriend(dev) {
                 showOnly(dev);
@@ -122,7 +188,7 @@
                 }
             }
             function omd(event){
-                    console.log("omd =" + JSON.stringify( event));
+                    console.log("omd =" + event);
                     var x = Math.round(+100-((200.0 * event.offsetX) / 640.0));
                     var y = Math.round(+100-((200.0 * event.offsetY) / 480.0));
                     sendJoy(x, y);
@@ -150,6 +216,7 @@
                     var message = JSON.parse(e.data);
                     console.log("-c->" + JSON.stringify(message));
                 };
+
             }
             function sendLd() {
                 var desc = duct.peerCon.localDescription;
@@ -158,6 +225,7 @@
                 console.log("to " + vidcc.label);
                 vidcc.send(JSON.stringify(mess));
                 addControl();
+                startQrDecode();
             }
 
             function srd() {
@@ -220,6 +288,7 @@
             function makedc(deviceId) {
                 console.log("setting deviceId" + deviceId);
                 duct.setTo(deviceId);
+                drawSegments();
                 duct.connect().then(function (d) {
                     setTimeout(function(){
                         makeVideo();
@@ -236,14 +305,14 @@
         </script>
     </head>
     <body>
-        <h1>Sts-pi Video </h1>
+        <h1>Sts-pi Video</h1>
         <div id="friendList">
-
         </div>
 
-        <video id="ownervideo" autoplay="autoplay" width="640" height="480"/>
-
-
+        <video id="ownervideo" autoplay="autoplay" width="640" height="480"></video>
+        <canvas width="320" height="240" id="qr-canvas" style="display: none"></canvas>
+        <div id="qtext"></div>
+        <div id="qlist"></div>
 
     </body>
 </html>

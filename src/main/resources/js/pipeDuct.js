@@ -16,7 +16,7 @@ function PipeDuct(finger,oldws) {
     this.configuration = {
                 "iceServers": [
                     {urls: "stun:146.148.121.175:3478"},
-                    {urls: "turn:146.148.121.175:3478?transport=udp", 'credential': 'nexus5x', 'username': 'smartphone'},
+                    {urls: "turn:146.148.121.175:3478?transport=udp", 'credential': 'snoopy', 'username': 'pet'},
                 ],
                 //"iceTransportPolicy": "relay",
                 "bundlePolicy":"max-bundle","iceCandidatePoolSize":1
