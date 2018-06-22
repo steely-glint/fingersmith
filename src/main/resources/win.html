@@ -1,0 +1,96 @@
+<html><head>
+<link href="/pipe.css" media="all" rel="stylesheet" />
+<title>Test to see if you have won</title></head>
+    <script src="js/require.js"></script>
+    <script src="js/jquery-1.8.3.js"></script>
+    <script src="js/phono.sdp.js"></script>
+    <script src="js/pipeDb.js"></script>
+    <script src="js/pipeDuct.js"></script>
+    <script src="js/claim.js"></script>
+    <script type="text/javascript">
+
+        var sha256 = require("js/sha256");
+        var duct;
+        var localid;
+        var droidtag = "";
+        var droidId = "";
+
+        function buildFriends(friends){
+            friends.forEach(function (fr){
+                if (fr.finger === droidtag){
+                    droidtag = fr.tag;
+                }
+            });
+        }
+        function gotId(id) {
+            localid = id;
+            PipeDb.dbListPrint(buildFriends);
+        }
+
+        function dopair(toId, nonceS) {
+            console.log("Trying data to pair");
+            duct = new PipeDuct(localid);
+            duct.connect().then(function (d) {
+                console.log("Duct promise returned ");
+                duct.setOnDataChannel(onNewDc);
+                duct.setTo(toId);
+                duct.setNonce(nonceS);
+
+                var channel = duct.createDataChannel("screen", {});
+                channel.onopen = function () {
+                    var message = {command: "show",tag:droidtag};
+                    channel.send(JSON.stringify(message));
+                    document.getElementById("result").innerHTML = "<blink><H1> YOU WON! </H1></blink>";
+                };
+                channel.onmessage = function(evt){
+                    var mess = evt.data;
+                    var jval = JSON.parse(mess);
+                    console.log("message "+mess);
+                };
+            });
+        };
+        function sayNo() {
+            document.getElementById("result").innerHTML = "<a href='fq.html'><H4> Keep trying....</H4></a>";
+        }
+
+        function haveSuitableHash(){
+            var ret = false;
+            if (document.location.hash) {
+                var h = document.location.hash.substring(1);
+                var bs = h.split(":");
+                var q = bs[0];
+                var n = bs[1];
+                console.log("Q = " + q + " n= " + n);
+                dopair(q,n);
+                ret = true;
+            }
+            return ret;
+        }
+
+        $(document).ready(function () {
+            var params = new URLSearchParams(document.location.search.substring(1));
+            droidId = params.get("droid");
+            if (!droidId){
+                sayNo();
+                console.log("missing droid id ");
+            }
+            console.log("droid id is  " + droidId);
+            PipeDb.whoAmI(function (id) {
+                gotId(id);
+                if (!haveSuitableHash()) {
+                    console.log("no hash" + err);
+                    sayNo();
+                }
+            }, function (err) {
+                console.log("could not create identity " + err);
+                sayNo();
+
+            });
+        });
+    </script>
+    <h1>Have you won ?</h1>
+
+    <div id='result'> </div>
+
+</body>
+</html>
