@@ -17,7 +17,7 @@
 
         function buildFriends(friends){
             friends.forEach(function (fr){
-                if (fr.finger === droidtag){
+                if (fr.finger === droidId){
                     droidtag = fr.tag;
                 }
             });
@@ -57,9 +57,8 @@
             var ret = false;
             if (document.location.hash) {
                 var h = document.location.hash.substring(1);
-                var bs = h.split(":");
-                var q = bs[0];
-                var n = bs[1];
+                var q = h.substring(0,64);
+                var n = h.substring(64);
                 console.log("Q = " + q + " n= " + n);
                 dopair(q,n);
                 ret = true;
