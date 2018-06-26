@@ -14,6 +14,7 @@
         <script type="text/javascript">
             var duct = null;
             var vidcc= null;
+            var droid = "";
             var controlChannel = null;
             var SEGLEN = 12;
             var SEGS = 8;
@@ -21,22 +22,19 @@
 
 
             function drawSegments(){
-                var text = "<ol>";
+                var text = "<pre>";
                 var winningCode = "";
                 for (var i=0;i<SEGS;i++){
-                    text += "<li>";
                     var se = localStorage.getItem("QRsegment"+i);
+                    text += i+"\t";
                     if (se) {
                         text += se;
-                        if (i ==(SEGS-1) ){
-                            winningCode += ":";
-                        }
                         winningCode +=se;
                     }
-                    text += "</li>";
+                    text += "\r\n";
                 }
-                text +="</ol>";
-                if (winningCode.length == ((SEGLEN*SEGS)+1)){
+                text +="</pre>";
+                if (winningCode.length == ((SEGLEN*SEGS))){
                     text += '<a href="win.html?droid='+droidId+'#'+winningCode+'"> Click to win </a>'
                 }
                 document.getElementById('qlist').innerHTML = text;
