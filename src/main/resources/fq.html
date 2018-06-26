@@ -17,6 +17,8 @@
             var controlChannel = null;
             var SEGLEN = 12;
             var SEGS = 8;
+            var droidId ="";
+
 
             function drawSegments(){
                 var text = "<ol>";
@@ -35,7 +37,7 @@
                 }
                 text +="</ol>";
                 if (winningCode.length == ((SEGLEN*SEGS)+1)){
-                    text += '<a href="win.html#'+winningCode+'"> Click to win </a>'
+                    text += '<a href="win.html?droid='+droidId+'#'+winningCode+'"> Click to win </a>'
                 }
                 document.getElementById('qlist').innerHTML = text;
             }
@@ -83,6 +85,7 @@
             }
 
             function setFriend(dev) {
+                droidId = dev;
                 showOnly(dev);
                 makedc(dev);
             }
@@ -109,6 +112,7 @@
             }
             function gotId(id) {
                 duct = new PipeDuct(id);
+                myTurn();
                 PipeDb.dbListPrint(showFriends);
                 $('#remote').hide();
             }
@@ -296,6 +300,21 @@
                 } );
             }
 
+            function myTurn(){
+                var params = new URLSearchParams(document.location.search.substring(1));
+                var animal = params.get("animal");
+                if (animal) {
+                    var conf = {
+                        "iceServers": [
+                            {urls: "stun:146.148.121.175:3478"},
+                            {urls: "turn:146.148.121.175:3478?transport=udp", 'credential': animal, 'username': animal},
+                        ],
+                        //"iceTransportPolicy": "relay",
+                        "bundlePolicy": "max-bundle", "iceCandidatePoolSize": 1
+                    };
+                    duct.configuration = conf;
+                }
+            }
 
             $(document).ready(function() {
                 PipeDb.whoAmI(gotId, function(err) {
