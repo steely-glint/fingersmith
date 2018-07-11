@@ -4,9 +4,7 @@
     <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js" integrity="sha384-vFJXuSJphROIrBnz7yo7oB41mKfc8JzQZiCq4NCceLEaO4IHwicKwpJf9c9IpFgh" crossorigin="anonymous"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js" integrity="sha384-alpBpkh1PFOepccYVYDB4do5UnbKysX5WZXm3XxPqe5iKTfUKjNkCk9SaVuEZflJ" crossorigin="anonymous"></script>
-
-        <script src="js/jquery-1.8.3.js"></script>
-        <script src="js/LazarQr.min.js"></script>
+     <script src="js/LazarQr.min.js"></script>
         <script src="js/phono.sdp.js"></script>
         <script src="js/pipeDb.js"></script>
         <script src="js/pipeDuct.js"></script>
@@ -106,6 +104,7 @@
                 });
                 pics += "</ol>";
                 $('#friendList').html(pics);
+                $('#qrModal').modal('show');
             }
             function gotId(id) {
                 duct = new PipeDuct(id);
@@ -333,15 +332,20 @@
                 </div>
             </div>
         </div>
-        <div class="card" style="width: 18rem;">
-            <div class="card-header" id="qtext">
 
+        <div class="card">
+            <div class="card-header" >
+                Live video
             </div>
             <video class="card-img-top" id="ownervideo" autoplay="autoplay" width="640" height="480"></video>
             <canvas width="640" height="480" id="qr-canvas" style="display: none"></canvas>
+        </div>
+        <div class="card">
             <div class="card-body" id="qlist">
-                <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+            </div>
+            <div class="card-footer" id="qtext">
             </div>
         </div>
+
     </body>
 </html>
