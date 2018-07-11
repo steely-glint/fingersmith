@@ -1,0 +1,347 @@
+<html><head><title>QRhunt</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js" integrity="sha384-vFJXuSJphROIrBnz7yo7oB41mKfc8JzQZiCq4NCceLEaO4IHwicKwpJf9c9IpFgh" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js" integrity="sha384-alpBpkh1PFOepccYVYDB4do5UnbKysX5WZXm3XxPqe5iKTfUKjNkCk9SaVuEZflJ" crossorigin="anonymous"></script>
+
+        <script src="js/jquery-1.8.3.js"></script>
+        <script src="js/LazarQr.min.js"></script>
+        <script src="js/phono.sdp.js"></script>
+        <script src="js/pipeDb.js"></script>
+        <script src="js/pipeDuct.js"></script>
+        <script type="text/javascript">
+            var duct = null;
+            var vidcc= null;
+            var droid = "";
+            var controlChannel = null;
+            var SEGLEN = 12;
+            var SEGS = 8;
+            var droidId ="";
+
+
+            function drawSegments(){
+                var text = "<pre>";
+                var winningCode = "";
+                for (var i=0;i<SEGS;i++){
+                    var se = localStorage.getItem("QRsegment"+i);
+                    text += i+"\t";
+                    if (se) {
+                        text += se;
+                        winningCode +=se;
+                    }
+                    text += "\r\n";
+                }
+                text +="</pre>";
+                if (winningCode.length == ((SEGLEN*SEGS))){
+                    text += '<a href="win.html?droid='+droidId+'#'+winningCode+'"> Click to win </a>'
+                }
+                document.getElementById('qlist').innerHTML = text;
+            }
+
+            function setSeg(n,s){
+                localStorage.setItem("QRsegment"+n,s);
+                drawSegments();
+            }
+
+            function addCode(c){
+                var bits = c.split(":");
+                if ((bits.length == 2) && (bits[0].length == 1) && (bits[1].length == SEGLEN )){
+                    var n = Number(bits[0]) ;
+                    if (n<SEGS){
+                        setSeg(n,bits[1]);
+                    }
+                } else {
+                    console.log("bad format for QR");
+                }
+            }
+
+            function startQrDecode() {
+                var video = document.getElementById('ownervideo');
+                var photo = document.getElementById('qr-canvas');
+                var context = photo.getContext('2d');
+                // set our canvas to the same size as our video
+
+                qrcode.callback = function(code) {
+                    console.log("got qrcode of " + code);
+                    document.getElementById('qtext').innerText = code;
+                    addCode(code);
+                };
+                var tick = setInterval(function() {
+                    if ((video.videoWidth > 0) && (video.videoHeight > 0)) {
+                        var rat = video.height / video.videoHeight;
+                        photo.width = video.videoWidth * rat;
+                        photo.height = video.videoHeight * rat;
+                        console.log("set photo to " + photo.width + " x " + photo.height);
+                        console.log("rat was " + rat);
+                        context.drawImage(video, 0, 0, photo.width, photo.height);
+                        document.getElementById('qtext').innerText = "";
+                        qrcode.decode();
+                    }
+                }, 500);
+            }
+
+            function setFriend(dev) {
+                droidId = dev;
+                showOnly(dev);
+                makedc(dev);
+            }
+            function showOnly(fing) {
+                PipeDb.dbListPrint(function(friends) {
+                        var pics = "<ul>";
+                        friends.forEach(function(fr) {
+                            if (fr.finger === fing) {
+                                pics += "<li><img src='" + fr.tag + "'/>Connecting...</li>";
+                            }
+                        });
+                        pics += "</ul>";
+                        $('#friendList').html(pics);
+                    }
+                );
+            }
+            function showFriends(friends) {
+                var pics = "<ol>";
+                friends.forEach(function(fr) {
+                    pics += "<li><img src='" + fr.tag + "' onclick=\"setFriend('" + fr.finger + "');\"/></li>";
+                });
+                pics += "</ol>";
+                $('#friendList').html(pics);
+            }
+            function gotId(id) {
+                duct = new PipeDuct(id);
+                myTurn();
+                PipeDb.dbListPrint(showFriends);
+                $('#remote').hide();
+            }
+            function addvideopatch(mess) {
+                var info = mess.info;
+                console.log("message is " + JSON.stringify(mess))
+                mess.patches = [
+                    // add an audio mid
+                    {
+                        "action": "increment",
+                        "at": "o=-",
+                        "field": 2
+                    },
+                    {
+                        "action": "replace",
+                        "at": "a=group:BUNDLE",
+                        "line": "a=group:BUNDLE " + info.datamid + " video"
+                    },
+                    {
+                        "action": "replace",
+                        "at": "m=application",
+                        "line": "m=application 9 DTLS/SCTP 5000"
+                    },
+                    /*
+                     a=msid-semantic: WMS janus m=video 9 RTP/SAVPF 126 c=IN IP4 192.168.1.80 a=sendonly a=mid:video a=rtcp-mux a=ice-ufrag:LXis a=ice-pwd:5Op42xm/UduOHWyse3idkf a=ice-options:trickle a=fingerprint:sha-256 D2:B9:31:8F:DF:24:D8:0E:ED:D2:EF:25:9E:AF:6F:B8:34:AE:53:9C:E6:F3:8F:F2:64:15:FA:E8:7F:53:2D:38 a=setup:actpass a=rtpmap:126 H264/90000 a=fmtp:126 profile-level-id=42e01f;packetization-mode=1 a=rtcp-fb:126 nack a=rtcp-fb:126 goog-remb a=ssrc:3792295630 cname:janusvideo a=ssrc:3792295630 msid:janus janusv0 a=ssrc:3792295630 mslabel:janus a=ssrc:3792295630 label:janusv0
+                     */            {
+                        "action": "append",
+                        "at": "end",
+                        "lines": [
+                            "m=video 9 RTP/SAVPF "+info.vtype,
+                            "a=mid:video",
+                            "a=sendonly",
+                            "a=rtcp-mux",
+                            "a=rtpmap:" + info.vtype + " " + info.codec,
+                            "a=fmtp:"+ info.vtype +" packetization-mode=1;profile-level-id=42e01f",
+                            "a=ssrc:" + info.csrc + " cname:drone",
+                            "a=ssrc:" + info.csrc + " mslabel:" + info.msid,
+                            "a=ssrc:" + info.csrc + " label:" + info.appdata,
+                            "a=ssrc:" + info.csrc + " msid:" + info.msid + " " + info.appdata,
+                        ]
+                    },
+                    {
+                        "action": "duplicate",
+                        "at": "a=mid:video",
+                        "line": "a=fingerprint:"
+                    },
+                    {
+                        "action": "duplicate",
+                        "at": "a=mid:video",
+                        "line": "a=ice-ufrag:"
+                    },
+                    {
+                        "action": "duplicate",
+                        "at": "a=mid:video",
+                        "line": "a=ice-pwd:"
+                    },
+                    {
+                        "action": "duplicate",
+                        "at": "a=mid:video",
+                        "line": "a=setup:"
+                    },
+                    {
+                        "action": "duplicate",
+                        "at": "a=mid:video",
+                        "line": "c=IN"
+                    }
+                ];
+
+            }
+
+            function sendHeartbeat(){
+                if ((controlChannel) && (controlChannel.readyState=="open")){
+                    var req = "heartbeat";
+                    var message = {command: req};
+                    console.log("-c-> send " + req);
+                    controlChannel.send(JSON.stringify(message));
+                }
+            }
+            function omd(event){
+                    console.log("omd =" + event);
+                    var x = Math.round(+100-((200.0 * event.offsetX) / 640.0));
+                    var y = Math.round(+100-((200.0 * event.offsetY) / 480.0));
+                    sendJoy(x, y);
+            }
+            function omu(event){
+                console.log("omu ="+event);
+                sendJoy(0,0);
+            }
+            function sendJoy(x,y){
+                if ((controlChannel) && (controlChannel.readyState=="open")) {
+                    var req = "joystick?x="+x+"&y="+y;
+                    var message = {command: req};
+                    console.log("-c-> send "+req);
+                    controlChannel.send(JSON.stringify(message));
+                }
+            }
+            function addControl(){
+                var control = duct.createDataChannel("http://localhost:8080/");
+                control.onopen = function(c) {
+                    console.log("-c-> open");
+                    setInterval(function(){sendHeartbeat();},10000);
+                    controlChannel = control;
+                };
+                control.onmessage = function(e){
+                    var message = JSON.parse(e.data);
+                    console.log("-c->" + JSON.stringify(message));
+                };
+
+            }
+            function sendLd() {
+                var desc = duct.peerCon.localDescription;
+                var mess = {type: desc.type, sdp: desc.sdp, tick: Date.now()};
+                console.log("sending " + JSON.stringify(mess));
+                console.log("to " + vidcc.label);
+                vidcc.send(JSON.stringify(mess));
+                addControl();
+                startQrDecode();
+            }
+
+            function srd() {
+                var pc = duct.peerCon;
+                console.log("set Remote description  ok");
+                pc.createAnswer(function (desc) {
+                    pc.setLocalDescription(desc, function () {
+                        console.log("Set Local description");
+                        setTimeout(sendLd, 100);
+                    }, function (e) {
+                        console.log("Set Local description error " + e);
+                    });
+                }, function (e) {
+                    console.log("Create answer error " + e);
+                });
+            }
+
+            function srdfail(e) {
+                console.log("Set Remote description error " + e);
+            }
+
+            function makeVideo(){
+
+                var vc = duct.createDataChannel("videorelay",{});
+                vc.onopen = function(){
+                    $('#qrModal').modal('hide');
+                    console.log("videorelay channel ");
+                    duct.peerCon.ontrack= function(e){
+                        console.log("got new stream");
+                        var video = document.getElementById('ownervideo');
+                        video.onmousedown = omd;
+                        video.onmouseup = omu;
+                        video.srcObject = e.streams[0];
+                    };
+                    setTimeout(function(){
+                        console.log("upgrade gst channel ");
+                        vc.send(JSON.stringify({type:"upgrade",time:Date.now()}));
+                    },100);
+                    vidcc = vc;
+                };
+                vc.onmessage = function(evt){
+                    var message = JSON.parse(evt.data);
+                    console.log("->" + JSON.stringify(message));
+                    if ((message.type == "offer" )
+                        || (message.type == "answer")) {
+                        if (message.info) {
+                            addvideopatch(message);
+                        }
+                        var patched = Phono.sdp.patch(duct.peerCon.remoteDescription.sdp, message);
+                        console.log("-+>" + JSON.stringify(patched));
+                        var rtcd = new RTCSessionDescription(patched);
+                        duct.peerCon.setRemoteDescription(rtcd, srd, srdfail);
+                    }
+                };
+                vc.onclose = function(){
+                }
+            }
+
+
+            function makedc(deviceId) {
+                console.log("setting deviceId" + deviceId);
+                duct.setTo(deviceId);
+                drawSegments();
+                duct.connect().then(function (d) {
+                    setTimeout(function(){
+                        makeVideo();
+                    },100);
+                } );
+            }
+
+            function myTurn(){
+                var params = new URLSearchParams(document.location.search.substring(1));
+                var animal = params.get("animal");
+                if (animal) {
+                    var conf = {
+                        "iceServers": [
+                            {urls: "stun:146.148.121.175:3478"},
+                            {urls: "turn:146.148.121.175:3478?transport=udp", 'credential': animal, 'username': animal},
+                        ],
+                        //"iceTransportPolicy": "relay",
+                        "bundlePolicy": "max-bundle", "iceCandidatePoolSize": 1
+                    };
+                    duct.configuration = conf;
+                }
+            }
+
+            $(document).ready(function() {
+                PipeDb.whoAmI(gotId, function(err) {
+                    console.log("could not create identity " + err);
+                });
+            });
+        </script>
+    </head>
+    <body>
+        <h1>Sts-pi Video</h1>
+        <div class="modal fade" id="qrModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="false">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel">Click on your animal...</h5>
+                    </div>
+                    <div class="modal-body" id="friendList">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card" style="width: 18rem;">
+            <div class="card-header" id="qtext">
+
+            </div>
+            <video class="card-img-top" id="ownervideo" autoplay="autoplay" width="640" height="480"></video>
+            <canvas width="640" height="480" id="qr-canvas" style="display: none"></canvas>
+            <div class="card-body" id="qlist">
+                <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+            </div>
+        </div>
+    </body>
+</html>
