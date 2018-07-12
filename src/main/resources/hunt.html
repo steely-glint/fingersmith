@@ -18,6 +18,8 @@
             var droidId ="";
 
 
+
+
             function drawSegments(){
                 var text = "<pre>";
                 var winningCode = "";
@@ -73,8 +75,13 @@
                         console.log("set photo to " + photo.width + " x " + photo.height);
                         console.log("rat was " + rat);
                         context.drawImage(video, 0, 0, photo.width, photo.height);
-                        document.getElementById('qtext').innerText = "";
-                        qrcode.decode();
+                        document.getElementById('qtext').innerText = "Searching for QR";
+                        try {
+				qrcode.decode();
+			}
+			catch(err) {
+    				document.getElementById('qtext').innerText= err;
+			}
                     }
                 }, 500);
             }
@@ -316,6 +323,12 @@
                 PipeDb.whoAmI(gotId, function(err) {
                     console.log("could not create identity " + err);
                 });
+$('#clear').on('click', function (e) {
+                for (var i=0;i<SEGS;i++){
+                    var se = localStorage.removeItem("QRsegment"+i);
+		}
+drawSegments();
+	});
             });
         </script>
     </head>
@@ -336,18 +349,19 @@
 
         <div class="card">
             <div class="card-header" >
-                Live video
+                <span>Live video<span>
             </div>
             <div class="container">
                 <div class="row">
-                <div class="col-lg">
+                <div class="col-md-auto">
                     <video class="card-img-top" id="ownervideo" autoplay="autoplay" width="640" height="480"></video>
                     <canvas width="640" height="480" id="qr-canvas" style="display: none"></canvas>
+                  <div id="qtext"></div>
                 </div>
-                <div class="col-sm" id="qlist">
+                <div class="col-sm">
+                  <div id="qlist"> </div>
+                  <a id="clear" class="btn btn-outline-danger">Clear List</a>
                 </div>
-            </div>
-            <div class="card-footer" id="qtext">
             </div>
         </div>
 
