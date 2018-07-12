@@ -1,4 +1,5 @@
 <html><head><title>QRhunt</title>
+    <link href="https://pi.pe/pipe.css" media="all" rel="stylesheet" />
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
     <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
@@ -10,46 +11,44 @@
         <script src="js/pipeDuct.js"></script>
         <script type="text/javascript">
             var duct = null;
-            var vidcc= null;
+            var vidcc = null;
             var droid = "";
             var controlChannel = null;
             var SEGLEN = 12;
             var SEGS = 8;
-            var droidId ="";
+            var droidId = "";
 
 
-
-
-            function drawSegments(){
+            function drawSegments() {
                 var text = "<pre>";
                 var winningCode = "";
-                for (var i=0;i<SEGS;i++){
-                    var se = localStorage.getItem("QRsegment"+i);
-                    text += i+"\t";
+                for (var i = 0; i < SEGS; i++) {
+                    var se = localStorage.getItem("QRsegment" + i);
+                    text += i + "\t";
                     if (se) {
                         text += se;
-                        winningCode +=se;
+                        winningCode += se;
                     }
                     text += "\r\n";
                 }
-                text +="</pre>";
-                if (winningCode.length == ((SEGLEN*SEGS))){
-                    text += '<a href="win.html?droid='+droidId+'#'+winningCode+'"> Click to win </a>'
+                text += "</pre>";
+                if (winningCode.length == ((SEGLEN * SEGS))) {
+                    text += '<a href="win.html?droid=' + droidId + '#' + winningCode + '"> Click to win </a>'
                 }
                 document.getElementById('qlist').innerHTML = text;
             }
 
-            function setSeg(n,s){
-                localStorage.setItem("QRsegment"+n,s);
+            function setSeg(n, s) {
+                localStorage.setItem("QRsegment" + n, s);
                 drawSegments();
             }
 
-            function addCode(c){
+            function addCode(c) {
                 var bits = c.split(":");
-                if ((bits.length == 2) && (bits[0].length == 1) && (bits[1].length == SEGLEN )){
-                    var n = Number(bits[0]) ;
-                    if (n<SEGS){
-                        setSeg(n,bits[1]);
+                if ((bits.length == 2) && (bits[0].length == 1) && (bits[1].length == SEGLEN )) {
+                    var n = Number(bits[0]);
+                    if (n < SEGS) {
+                        setSeg(n, bits[1]);
                     }
                 } else {
                     console.log("bad format for QR");
@@ -62,12 +61,12 @@
                 var context = photo.getContext('2d');
                 // set our canvas to the same size as our video
 
-                qrcode.callback = function(code) {
+                qrcode.callback = function (code) {
                     console.log("got qrcode of " + code);
                     document.getElementById('qtext').innerText = code;
                     addCode(code);
                 };
-                var tick = setInterval(function() {
+                var tick = setInterval(function () {
                     if ((video.videoWidth > 0) && (video.videoHeight > 0)) {
                         var rat = video.height / video.videoHeight;
                         photo.width = video.videoWidth * rat;
@@ -77,11 +76,11 @@
                         context.drawImage(video, 0, 0, photo.width, photo.height);
                         document.getElementById('qtext').innerText = "Searching for QR";
                         try {
-				qrcode.decode();
-			}
-			catch(err) {
-    				document.getElementById('qtext').innerText= err;
-			}
+                            qrcode.decode();
+                        }
+                        catch (err) {
+                            document.getElementById('qtext').innerText = err;
+                        }
                     }
                 }, 500);
             }
@@ -92,9 +91,9 @@
                 makedc(dev);
             }
             function showOnly(fing) {
-                PipeDb.dbListPrint(function(friends) {
+                PipeDb.dbListPrint(function (friends) {
                         var pics = "<ul>";
-                        friends.forEach(function(fr) {
+                        friends.forEach(function (fr) {
                             if (fr.finger === fing) {
                                 pics += "<li><img src='" + fr.tag + "'/>Connecting...</li>";
                             }
@@ -106,7 +105,7 @@
             }
             function showFriends(friends) {
                 var pics = "<ol>";
-                friends.forEach(function(fr) {
+                friends.forEach(function (fr) {
                     pics += "<li><img src='" + fr.tag + "' onclick=\"setFriend('" + fr.finger + "');\"/></li>";
                 });
                 pics += "</ol>";
@@ -145,12 +144,12 @@
                         "action": "append",
                         "at": "end",
                         "lines": [
-                            "m=video 9 RTP/SAVPF "+info.vtype,
+                            "m=video 9 RTP/SAVPF " + info.vtype,
                             "a=mid:video",
                             "a=sendonly",
                             "a=rtcp-mux",
                             "a=rtpmap:" + info.vtype + " " + info.codec,
-                            "a=fmtp:"+ info.vtype +" packetization-mode=1;profile-level-id=42e01f",
+                            "a=fmtp:" + info.vtype + " packetization-mode=1;profile-level-id=42e01f",
                             "a=ssrc:" + info.csrc + " cname:drone",
                             "a=ssrc:" + info.csrc + " mslabel:" + info.msid,
                             "a=ssrc:" + info.csrc + " label:" + info.appdata,
@@ -186,40 +185,42 @@
 
             }
 
-            function sendHeartbeat(){
-                if ((controlChannel) && (controlChannel.readyState=="open")){
+            function sendHeartbeat() {
+                if ((controlChannel) && (controlChannel.readyState == "open")) {
                     var req = "heartbeat";
                     var message = {command: req};
                     console.log("-c-> send " + req);
                     controlChannel.send(JSON.stringify(message));
                 }
             }
-            function omd(event){
-                    console.log("omd =" + event);
-                    var x = Math.round(+100-((200.0 * event.offsetX) / 640.0));
-                    var y = Math.round(+100-((200.0 * event.offsetY) / 480.0));
-                    sendJoy(x, y);
+            function omd(event) {
+                console.log("omd =" + event);
+                var x = Math.round(+100 - ((200.0 * event.offsetX) / 640.0));
+                var y = Math.round(+100 - ((200.0 * event.offsetY) / 480.0));
+                sendJoy(x, y);
             }
-            function omu(event){
-                console.log("omu ="+event);
-                sendJoy(0,0);
+            function omu(event) {
+                console.log("omu =" + event);
+                sendJoy(0, 0);
             }
-            function sendJoy(x,y){
-                if ((controlChannel) && (controlChannel.readyState=="open")) {
-                    var req = "joystick?x="+x+"&y="+y;
+            function sendJoy(x, y) {
+                if ((controlChannel) && (controlChannel.readyState == "open")) {
+                    var req = "joystick?x=" + x + "&y=" + y;
                     var message = {command: req};
-                    console.log("-c-> send "+req);
+                    console.log("-c-> send " + req);
                     controlChannel.send(JSON.stringify(message));
                 }
             }
-            function addControl(){
+            function addControl() {
                 var control = duct.createDataChannel("http://localhost:8080/");
-                control.onopen = function(c) {
+                control.onopen = function (c) {
                     console.log("-c-> open");
-                    setInterval(function(){sendHeartbeat();},10000);
+                    setInterval(function () {
+                        sendHeartbeat();
+                    }, 10000);
                     controlChannel = control;
                 };
-                control.onmessage = function(e){
+                control.onmessage = function (e) {
                     var message = JSON.parse(e.data);
                     console.log("-c->" + JSON.stringify(message));
                 };
@@ -254,26 +255,26 @@
                 console.log("Set Remote description error " + e);
             }
 
-            function makeVideo(){
+            function makeVideo() {
 
-                var vc = duct.createDataChannel("videorelay",{});
-                vc.onopen = function(){
+                var vc = duct.createDataChannel("videorelay", {});
+                vc.onopen = function () {
                     $('#qrModal').modal('hide');
                     console.log("videorelay channel ");
-                    duct.peerCon.ontrack= function(e){
+                    duct.peerCon.ontrack = function (e) {
                         console.log("got new stream");
                         var video = document.getElementById('ownervideo');
                         video.onmousedown = omd;
                         video.onmouseup = omu;
                         video.srcObject = e.streams[0];
                     };
-                    setTimeout(function(){
+                    setTimeout(function () {
                         console.log("upgrade gst channel ");
-                        vc.send(JSON.stringify({type:"upgrade",time:Date.now()}));
-                    },100);
+                        vc.send(JSON.stringify({type: "upgrade", time: Date.now()}));
+                    }, 100);
                     vidcc = vc;
                 };
-                vc.onmessage = function(evt){
+                vc.onmessage = function (evt) {
                     var message = JSON.parse(evt.data);
                     console.log("->" + JSON.stringify(message));
                     if ((message.type == "offer" )
@@ -287,7 +288,7 @@
                         duct.peerCon.setRemoteDescription(rtcd, srd, srdfail);
                     }
                 };
-                vc.onclose = function(){
+                vc.onclose = function () {
                 }
             }
 
@@ -297,13 +298,13 @@
                 duct.setTo(deviceId);
                 drawSegments();
                 duct.connect().then(function (d) {
-                    setTimeout(function(){
+                    setTimeout(function () {
                         makeVideo();
-                    },100);
-                } );
+                    }, 100);
+                });
             }
 
-            function myTurn(){
+            function myTurn() {
                 var params = new URLSearchParams(document.location.search.substring(1));
                 var animal = params.get("animal");
                 if (animal) {
@@ -319,51 +320,52 @@
                 }
             }
 
-            $(document).ready(function() {
-                PipeDb.whoAmI(gotId, function(err) {
+            $(document).ready(function () {
+                PipeDb.whoAmI(gotId, function (err) {
                     console.log("could not create identity " + err);
                 });
-$('#clear').on('click', function (e) {
-                for (var i=0;i<SEGS;i++){
-                    var se = localStorage.removeItem("QRsegment"+i);
-		}
-drawSegments();
-	});
+                $('#clear').on('click', function (e) {
+                    for (var i = 0; i < SEGS; i++) {
+                        var se = localStorage.removeItem("QRsegment" + i);
+                    }
+                    drawSegments();
+                });
             });
         </script>
     </head>
-    <body>
-        <h1>Sts-pi Video</h1>
-        <div class="modal fade" id="qrModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="false">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="exampleModalLabel">Click on your animal...</h5>
-                    </div>
-                    <div class="modal-body" id="friendList">
-                    </div>
-                </div>
+<body>
+<h1>Sts-pi Video</h1>
+<div class="modal fade" id="qrModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+     aria-hidden="false">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Click on your animal...</h5>
+            </div>
+            <div class="modal-body" id="friendList">
             </div>
         </div>
+    </div>
+</div>
 
 
-        <div class="card">
-            <div class="card-header" >
-                <span>Live video<span>
+<div class="card">
+    <div class="card-header">
+        <span>Live video</span>
+    </div>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-auto">
+                <video class="card-img-top" id="ownervideo" autoplay="autoplay" width="640" height="480"></video>
+                <canvas width="640" height="480" id="qr-canvas" style="display: none"></canvas>
+                <div id="qtext"></div>
             </div>
-            <div class="container">
-                <div class="row">
-                <div class="col-md-auto">
-                    <video class="card-img-top" id="ownervideo" autoplay="autoplay" width="640" height="480"></video>
-                    <canvas width="640" height="480" id="qr-canvas" style="display: none"></canvas>
-                  <div id="qtext"></div>
-                </div>
-                <div class="col-sm">
-                  <div id="qlist"> </div>
-                  <a id="clear" class="btn btn-outline-danger">Clear List</a>
-                </div>
+            <div class="col-sm">
+                <div id="qlist"></div>
+                <a id="clear" class="btn btn-outline-danger">Clear List</a>
             </div>
         </div>
-
-    </body>
+    </div>
+</div>
+</body>
 </html>
