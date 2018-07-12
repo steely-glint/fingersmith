@@ -211,6 +211,30 @@
                     controlChannel.send(JSON.stringify(message));
                 }
             }
+
+            function onkeydown(ev){
+                var x =0;
+                var y =0;
+                switch  (ev.keyCode) {
+                    case 38: // up
+                        y=100;
+                        break;
+                    case 40:
+                        // down
+                        y=-100;
+                        break;
+                    case 37:
+                        x=-100;
+                        //left
+                        break;
+                    case 39:
+                        x=+100;
+                        // right
+                        break;
+                }
+                sendJoy(x,y);
+            }
+
             function addControl() {
                 var control = duct.createDataChannel("http://localhost:8080/");
                 control.onopen = function (c) {
@@ -224,6 +248,8 @@
                     var message = JSON.parse(e.data);
                     console.log("-c->" + JSON.stringify(message));
                 };
+                document.addEventListener('keydown',onkeydown);
+                document.addEventListener('keyup',omu);
 
             }
             function sendLd() {
