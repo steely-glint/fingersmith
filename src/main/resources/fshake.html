@@ -27,7 +27,7 @@
         if (resp.status === "ok") {
             console.log("have introd " + friendId + "to " + deviceId);
             $('#result').html("<H3>Success!</H3>");
-            var mess = {id: friendId, action: "accepted", page: "/"};
+            var mess = {id: friendId, action: "accepted", page: resp.page};
             console.log("sending " + JSON.stringify(mess));
             pipe.send(JSON.stringify(mess));
         } else {

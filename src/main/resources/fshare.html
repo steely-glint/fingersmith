@@ -80,7 +80,10 @@
                 PipeDb.dbAddPrint(printncert, dcb);
             }
             if (req.action === "accepted") {
-                $('#result').html("<H3>Congratulations. You now have access to your friend's device.</H3>");
+                if (req.page) {
+                    localStorage[req.page] = req.id;
+                }
+                document.getElementById("result").innerHTML = "Accepted. Click |pipe| to use <br/><a href='/iot/"+req.page+"'><img style='background: black;'  src='/img/pipe@2x.png'/></a>";
                 pipe.close();
             }
         }
@@ -102,8 +105,5 @@
 
     </div>
     <div id="result"> Get scanned by a friend's smartphone to join their network.</div>
-
-
-
 </body>
 </html>
