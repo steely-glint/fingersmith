@@ -17,6 +17,8 @@
             var SEGLEN = 12;
             var SEGS = 8;
             var droidId = "";
+            var lx = 0;
+            var ly = 0;
 
 
             function drawSegments() {
@@ -205,10 +207,14 @@
             }
             function sendJoy(x, y) {
                 if ((controlChannel) && (controlChannel.readyState == "open")) {
-                    var req = "joystick?x=" + x + "&y=" + y;
-                    var message = {command: req};
-                    console.log("-c-> send " + req);
-                    controlChannel.send(JSON.stringify(message));
+		    if ((lx != x) || (ly != y)){
+			lx = x;
+                        ly = y;
+                    	var req = "joystick?x=" + x + "&y=" + y;
+                    	var message = {command: req};
+                    	console.log("-c-> send " + req);
+                    	controlChannel.send(JSON.stringify(message));
+		    }
                 }
             }
 
@@ -217,18 +223,22 @@
                 var y =0;
                 switch  (ev.keyCode) {
                     case 38: // up
+                    case 66:
                         y=100;
                         break;
                     case 40:
+                    case 70:
                         // down
                         y=-100;
                         break;
                     case 37:
-                        x=-100;
+                    case 76:
+                        x=+100;
                         //left
                         break;
                     case 39:
-                        x=+100;
+                    case 82:
+                        x=-100;
                         // right
                         break;
                 }
